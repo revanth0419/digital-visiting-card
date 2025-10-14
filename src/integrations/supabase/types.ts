@@ -58,6 +58,42 @@ export type Database = {
           },
         ]
       }
+      media: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          order_index: number
+          profile_id: string
+          title: string
+          type: string
+          updated_at: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          order_index?: number
+          profile_id: string
+          title: string
+          type: string
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          order_index?: number
+          profile_id?: string
+          title?: string
+          type?: string
+          updated_at?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

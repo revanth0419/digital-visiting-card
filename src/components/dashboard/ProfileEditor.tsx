@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,12 +16,14 @@ type ProfileEditorProps = {
 const ProfileEditor = ({ userId }: ProfileEditorProps) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [profileId, setProfileId] = useState("");
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [themeColor, setThemeColor] = useState("#8b5cf6");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,6 +52,77 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
       setThemeColor(data.theme_color || "#8b5cf6");
     }
     setLoading(false);
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid file",
+          description: "Please upload an image file (JPG, PNG, or WEBP)",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (file.size > 5242880) {
+        toast({
+          title: "File too large",
+          description: "Please upload an image smaller than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setUploading(true);
+
+      if (avatarUrl) {
+        const oldPath = avatarUrl.split('/').pop();
+        if (oldPath) {
+          await supabase.storage
+            .from('avatars')
+            .remove([`${userId}/${oldPath}`]);
+        }
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${userId}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('user_id', userId);
+
+      if (updateError) throw updateError;
+
+      setAvatarUrl(publicUrl);
+      toast({
+        title: "Success",
+        description: "Avatar uploaded successfully!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error uploading avatar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -107,10 +180,36 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
               {(displayName || username).charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <Button variant="outline" size="sm" disabled>
-            <Upload className="w-4 h-4 mr-2" />
-            Upload Avatar (Coming Soon)
-          </Button>
+          <div className="text-center">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleAvatarUpload}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Avatar
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground mt-1">
+              Max 5MB (JPG, PNG, WEBP)
+            </p>
+          </div>
         </div>
 
         {/* Username (Read-only) */}

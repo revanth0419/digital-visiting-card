@@ -8,6 +8,7 @@ import { LogOut, Zap, Eye } from "lucide-react";
 import ProfileEditor from "@/components/dashboard/ProfileEditor";
 import LinksManager from "@/components/dashboard/LinksManager";
 import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
+import MediaManager from "@/components/dashboard/MediaManager";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Dashboard = () => {
@@ -122,8 +123,9 @@ const Dashboard = () => {
             </div>
 
             {/* Right Column */}
-            <div>
+            <div className="space-y-6">
               <LinksManager userId={session.user.id} />
+              <MediaManager userId={session.user.id} />
             </div>
           </div>
         </div>
