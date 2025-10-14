@@ -2,12 +2,18 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Zap, Link as LinkIcon, QrCode, Sparkles } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Index = () => {
   return (
     <div className="min-h-screen gradient-mesh">
+      {/* Header with Theme Toggle */}
+      <div className="container mx-auto px-4 pt-4 flex justify-end">
+        <ThemeToggle />
+      </div>
+
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
+      <section className="container mx-auto px-4 py-12 text-center">
         <div className="max-w-4xl mx-auto animate-fade-in">
           <div className="flex items-center justify-center gap-3 mb-6">
             <Zap className="w-16 h-16 text-primary" />
@@ -20,7 +26,7 @@ const Index = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/auth">
-              <Button size="lg" className="bg-gradient-primary hover:opacity-90 transition-opacity text-lg px-8">
+              <Button size="lg" variant="gradient" className="text-lg px-8">
                 Get Started Free
               </Button>
             </Link>
@@ -90,7 +96,7 @@ const Index = () => {
               Create your free profile in seconds. No credit card required.
             </p>
             <Link to="/auth">
-              <Button size="lg" className="bg-gradient-primary hover:opacity-90 transition-opacity text-lg px-8">
+              <Button size="lg" variant="gradient" className="text-lg px-8">
                 Create Your Profile
               </Button>
             </Link>

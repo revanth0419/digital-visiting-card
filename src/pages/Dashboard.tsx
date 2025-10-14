@@ -8,6 +8,7 @@ import { LogOut, Zap, Eye } from "lucide-react";
 import ProfileEditor from "@/components/dashboard/ProfileEditor";
 import LinksManager from "@/components/dashboard/LinksManager";
 import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Dashboard = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -92,6 +93,7 @@ const Dashboard = () => {
             <h1 className="text-2xl font-bold text-gradient">Prism Link Spot</h1>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Button variant="outline" size="sm" onClick={handleViewProfile}>
               <Eye className="w-4 h-4 mr-2" />
               View Profile
