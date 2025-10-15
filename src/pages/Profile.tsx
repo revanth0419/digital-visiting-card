@@ -50,9 +50,10 @@ const Profile = () => {
     const fetchProfile = async () => {
       if (!username) return;
 
+      // Security: Only select safe columns, exclude user_id to prevent UUID exposure
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("*")
+        .select("id, username, display_name, bio, avatar_url, theme_color, created_at, updated_at")
         .eq("username", username)
         .single();
 
