@@ -36,6 +36,9 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
   const [description, setDescription] = useState("");
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [lightboxType, setLightboxType] = useState<"image" | "video">("image");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -75,54 +78,80 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+    
+    if (!isImage && !isVideo) {
+      toast({
+        title: "Invalid file",
+        description: "Please upload an image (JPG, PNG, WEBP) or video (MP4)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (50MB for videos, 5MB for images)
+    const maxSize = isVideo ? 52428800 : 5242880;
+    if (file.size > maxSize) {
+      toast({
+        title: "File too large",
+        description: `Please upload ${isVideo ? 'a video smaller than 50MB' : 'an image smaller than 5MB'}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Set selected file and create preview
+    setSelectedFile(file);
+    const preview = URL.createObjectURL(file);
+    setPreviewUrl(preview);
+  };
+
+  const handleSaveMedia = async () => {
+    if (!selectedFile) {
+      toast({
+        title: "No file selected",
+        description: "Please select a file to upload",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!title.trim()) {
+      toast({
+        title: "Title required",
+        description: "Please enter a title for your media",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      const file = event.target.files?.[0];
-      if (!file) return;
-
-      // Validate file type
-      const isImage = file.type.startsWith('image/');
-      const isVideo = file.type.startsWith('video/');
-      
-      if (!isImage && !isVideo) {
-        toast({
-          title: "Invalid file",
-          description: "Please upload an image (JPG, PNG, WEBP) or video (MP4)",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Validate file size (50MB for videos, 5MB for images)
-      const maxSize = isVideo ? 52428800 : 5242880;
-      if (file.size > maxSize) {
-        toast({
-          title: "File too large",
-          description: `Please upload ${isVideo ? 'a video smaller than 50MB' : 'an image smaller than 5MB'}`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!title.trim()) {
-        toast({
-          title: "Title required",
-          description: "Please enter a title for your media",
-          variant: "destructive",
-        });
-        return;
-      }
-
       setUploading(true);
+      setUploadProgress(0);
 
-      // Upload file
-      const fileExt = file.name.split('.').pop();
+      const isImage = selectedFile.type.startsWith('image/');
+      const fileExt = selectedFile.name.split('.').pop();
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
 
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => Math.min(prev + 10, 90));
+      }, 200);
+
+      // Upload file
       const { error: uploadError } = await supabase.storage
         .from('media')
-        .upload(filePath, file);
+        .upload(filePath, selectedFile);
+
+      clearInterval(progressInterval);
+      setUploadProgress(95);
 
       if (uploadError) throw uploadError;
 
@@ -145,6 +174,8 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
 
       if (insertError) throw insertError;
 
+      setUploadProgress(100);
+
       toast({
         title: "Success",
         description: "Media uploaded successfully!",
@@ -153,6 +184,9 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       // Reset form
       setTitle("");
       setDescription("");
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      setUploadProgress(0);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -167,6 +201,18 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       });
     } finally {
       setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleCancelUpload = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setTitle("");
+    setDescription("");
+    setUploadProgress(0);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -226,6 +272,33 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
         <CardContent className="space-y-6">
           {/* Upload Form */}
           <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+            {/* Preview Section */}
+            {previewUrl && (
+              <div className="relative rounded-lg overflow-hidden bg-muted">
+                {selectedFile?.type.startsWith('image/') ? (
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="w-full h-48 object-cover"
+                  />
+                ) : (
+                  <video
+                    src={previewUrl}
+                    className="w-full h-48 object-cover"
+                    controls
+                  />
+                )}
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="absolute top-2 right-2"
+                  onClick={handleCancelUpload}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
             <div>
               <Label htmlFor="media-title">Title *</Label>
               <Input
@@ -249,37 +322,78 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
               />
             </div>
 
-            <div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="w-full"
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
+            {/* Upload Progress */}
+            {uploading && uploadProgress > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Uploading...</span>
+                  <span className="font-medium">{uploadProgress}%</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-primary h-full transition-all duration-300 ease-out"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              {!selectedFile ? (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="flex-1"
+                  >
                     <Upload className="w-4 h-4 mr-2" />
-                    Upload Image or Video
-                  </>
-                )}
-              </Button>
-              <p className="text-xs text-muted-foreground mt-2">
-                Images: Max 5MB (JPG, PNG, WEBP) • Videos: Max 50MB (MP4)
-              </p>
+                    Select File
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    variant="gradient"
+                    onClick={handleSaveMedia}
+                    disabled={uploading}
+                    className="flex-1"
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Save & Upload
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancelUpload}
+                    disabled={uploading}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Images: Max 5MB (JPG, PNG, WEBP) • Videos: Max 50MB (MP4)
+            </p>
           </div>
 
           {/* Media Grid */}

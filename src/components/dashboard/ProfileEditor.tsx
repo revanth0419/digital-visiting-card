@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, Save } from "lucide-react";
 
 type ProfileEditorProps = {
   userId: string;
@@ -189,7 +189,7 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
               className="hidden"
             />
             <Button
-              variant="outline"
+              variant="gradient"
               size="sm"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
@@ -276,10 +276,20 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="w-full bg-gradient-primary hover:opacity-90"
+          variant="gradient"
+          className="w-full"
         >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-          Save Changes
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4 mr-2" />
+              Save Changes
+            </>
+          )}
         </Button>
       </CardContent>
     </Card>

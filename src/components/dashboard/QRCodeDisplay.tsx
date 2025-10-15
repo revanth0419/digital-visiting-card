@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
+import { Download, Loader2, QrCode, Share2, Copy } from "lucide-react";
 
 type QRCodeDisplayProps = {
   userId: string;
@@ -13,6 +14,7 @@ const QRCodeDisplay = ({ userId }: QRCodeDisplayProps) => {
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState("");
   const [profileUrl, setProfileUrl] = useState("");
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchProfile();
@@ -46,15 +48,57 @@ const QRCodeDisplay = ({ userId }: QRCodeDisplayProps) => {
       canvas.width = img.width;
       canvas.height = img.height;
       ctx?.drawImage(img, 0, 0);
-      const pngFile = canvas.toDataURL("image/png");
 
-      const downloadLink = document.createElement("a");
-      downloadLink.download = `${username}-qrcode.png`;
-      downloadLink.href = pngFile;
-      downloadLink.click();
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `${username}-qr-code.png`;
+          link.click();
+          URL.revokeObjectURL(url);
+
+          toast({
+            title: "Success",
+            description: "QR code downloaded!",
+          });
+        }
+      });
     };
 
     img.src = "data:image/svg+xml;base64," + btoa(svgData);
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(profileUrl);
+      toast({
+        title: "Link copied!",
+        description: "Profile link copied to clipboard",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to copy",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${username}'s Profile`,
+          text: `Check out my profile on Prism Link Spot!`,
+          url: profileUrl,
+        });
+      } catch (error) {
+        // User cancelled share
+      }
+    } else {
+      handleCopyLink();
+    }
   };
 
   if (loading) {
@@ -70,33 +114,46 @@ const QRCodeDisplay = ({ userId }: QRCodeDisplayProps) => {
   }
 
   return (
-    <Card className="glass-card border-2">
+    <Card className="glass-card border-2 border-primary/20">
       <CardHeader>
-        <CardTitle>QR Code</CardTitle>
-        <CardDescription>Share your profile instantly</CardDescription>
+        <CardTitle className="flex items-center gap-2 text-gradient">
+          <QrCode className="w-5 h-5" />
+          Your QR Code
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-col items-center">
-          <div className="bg-white p-4 rounded-lg shadow-elegant">
-            <QRCodeSVG
-              id="qr-code"
-              value={profileUrl}
-              size={200}
-              level="H"
-              includeMargin
-            />
-          </div>
-          <p className="text-xs text-muted-foreground mt-3 text-center break-all">
+      <CardContent className="flex flex-col items-center gap-4">
+        <div className="p-6 bg-white rounded-xl shadow-[0_0_30px_hsl(var(--primary)/0.2)]">
+          <QRCodeSVG
+            id="qr-code"
+            value={profileUrl}
+            size={220}
+            level="H"
+            includeMargin
+            fgColor="hsl(270 91% 65%)"
+          />
+        </div>
+
+        <div className="text-center space-y-1">
+          <p className="text-sm font-medium">Scan to view your profile</p>
+          <p className="text-xs text-muted-foreground break-all px-4">
             {profileUrl}
           </p>
         </div>
-        <Button
-          onClick={handleDownload}
-          variant="outline"
-          className="w-full"
-        >
-          <Download className="w-4 h-4 mr-2" />
-          Download QR Code
+
+        <div className="grid grid-cols-2 gap-2 w-full">
+          <Button onClick={handleDownload} variant="gradient" className="flex-1">
+            <Download className="w-4 h-4 mr-2" />
+            Download
+          </Button>
+          <Button onClick={handleShare} variant="outline" className="flex-1">
+            <Share2 className="w-4 h-4 mr-2" />
+            Share
+          </Button>
+        </div>
+
+        <Button onClick={handleCopyLink} variant="ghost" size="sm" className="w-full">
+          <Copy className="w-4 h-4 mr-2" />
+          Copy Link
         </Button>
       </CardContent>
     </Card>

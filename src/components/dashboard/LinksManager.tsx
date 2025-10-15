@@ -301,10 +301,20 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
           <Button
             onClick={handleAddLink}
             disabled={adding}
-            className="w-full bg-gradient-primary hover:opacity-90"
+            variant="gradient"
+            className="w-full"
           >
-            {adding ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-            Add Link
+            {adding ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Link
+              </>
+            )}
           </Button>
         </div>
 
