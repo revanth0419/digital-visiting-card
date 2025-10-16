@@ -4,13 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ExternalLink, Zap, Image as ImageIcon, Video, X } from "lucide-react";
+import { ExternalLink, Zap, Image as ImageIcon, Video, X, QrCode } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { QRCodeSVG } from "qrcode.react";
 
 type Profile = {
   id: string;
@@ -45,6 +46,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [lightboxType, setLightboxType] = useState<"image" | "video">("image");
+  const [showQR, setShowQR] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -124,6 +126,7 @@ const Profile = () => {
   }
 
   const themeColor = profile.theme_color || "#8b5cf6";
+  const profileUrl = `${window.location.origin}/u/${profile.username}`;
 
   return (
     <div className="min-h-screen gradient-mesh">
@@ -147,6 +150,19 @@ const Profile = () => {
               {profile.bio}
             </p>
           )}
+
+          {/* QR Code Button */}
+          <div className="mt-6">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowQR(true)}
+              className="gap-2"
+            >
+              <QrCode className="w-4 h-4" />
+              Show QR Code
+            </Button>
+          </div>
         </div>
 
         {/* Links */}
@@ -234,6 +250,28 @@ const Profile = () => {
           </div>
         </div>
       </div>
+
+      {/* QR Code Dialog */}
+      <Dialog open={showQR} onOpenChange={setShowQR}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>QR Code for {profile.display_name || profile.username}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center space-y-4">
+            <div className="bg-white p-4 rounded-lg">
+              <QRCodeSVG
+                value={profileUrl}
+                size={200}
+                level="H"
+                includeMargin={true}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground text-center">
+              Scan this QR code to visit this profile
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Lightbox Dialog */}
       <Dialog open={!!lightboxUrl} onOpenChange={() => setLightboxUrl(null)}>

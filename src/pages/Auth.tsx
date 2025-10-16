@@ -10,6 +10,7 @@ import { Zap } from "lucide-react";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -37,6 +38,42 @@ const Auth = () => {
 
   const validateUsername = (username: string) => {
     return username.length >= 3 && username.length <= 30 && /^[a-zA-Z0-9_-]+$/.test(username);
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    if (!validateEmail(email)) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Check your email",
+        description: "We've sent you a password reset link.",
+      });
+      setIsForgotPassword(false);
+      setEmail("");
+    }
+
+    setLoading(false);
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -103,6 +140,18 @@ const Auth = () => {
           navigate("/dashboard");
         }
       } else {
+        // Check if email is Gmail (basic validation for Gmail requirement)
+        const emailDomain = email.toLowerCase().split('@')[1];
+        if (emailDomain !== 'gmail.com') {
+          toast({
+            title: "Invalid email domain",
+            description: "Please use a valid Gmail account to sign up.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -162,13 +211,19 @@ const Auth = () => {
 
         <Card className="glass-card border-2 shadow-elegant">
           <CardHeader>
-            <CardTitle>{isLogin ? "Welcome Back" : "Create Account"}</CardTitle>
+            <CardTitle>
+              {isForgotPassword ? "Reset Password" : isLogin ? "Welcome Back" : "Create Account"}
+            </CardTitle>
             <CardDescription>
-              {isLogin ? "Log in to manage your links" : "Sign up to get started"}
+              {isForgotPassword
+                ? "Enter your email to receive a password reset link"
+                : isLogin
+                ? "Log in to manage your links"
+                : "Sign up to get started"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleAuth} className="space-y-4">
+            <form onSubmit={isForgotPassword ? handleForgotPassword : handleAuth} className="space-y-4">
               {!isLogin && (
                 <>
                   <div className="space-y-2">
@@ -205,38 +260,62 @@ const Auth = () => {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
+              {!isForgotPassword && (
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                  />
+                  {isLogin && (
+                    <button
+                      type="button"
+                      onClick={() => setIsForgotPassword(true)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+              )}
               <Button
                 type="submit"
                 variant="gradient"
                 className="w-full"
                 disabled={loading}
               >
-                {loading ? "Loading..." : isLogin ? "Log In" : "Sign Up"}
+                {loading ? "Loading..." : isForgotPassword ? "Send Reset Link" : isLogin ? "Log In" : "Sign Up"}
               </Button>
             </form>
 
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setPassword("");
-                }}
-                className="text-sm text-primary hover:underline"
-              >
-                {isLogin ? "Don't have an account? Sign up" : "Already have an account? Log in"}
-              </button>
+            <div className="mt-4 text-center space-y-2">
+              {isForgotPassword ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotPassword(false);
+                    setEmail("");
+                  }}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Back to login
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLogin(!isLogin);
+                    setPassword("");
+                  }}
+                  className="text-sm text-primary hover:underline"
+                >
+                  {isLogin ? "Don't have an account? Sign up" : "Already have an account? Log in"}
+                </button>
+              )}
             </div>
           </CardContent>
         </Card>

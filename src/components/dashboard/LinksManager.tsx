@@ -137,6 +137,14 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
     setLoading(false);
   };
 
+  const normalizeUrl = (url: string): string => {
+    // If URL starts with www., add https://
+    if (url.trim().startsWith("www.")) {
+      return `https://${url.trim()}`;
+    }
+    return url.trim();
+  };
+
   const validateUrl = (url: string) => {
     try {
       const urlObj = new URL(url);
@@ -156,16 +164,19 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
       return;
     }
 
-    if (!validateUrl(newUrl)) {
+    // Normalize URL (add https:// to www. URLs)
+    const normalizedUrl = normalizeUrl(newUrl);
+
+    if (!validateUrl(normalizedUrl)) {
       toast({
         title: "Invalid URL",
-        description: "Please enter a valid HTTP or HTTPS URL.",
+        description: "Please enter a valid URL (e.g., https://example.com or www.example.com).",
         variant: "destructive",
       });
       return;
     }
 
-    if (newUrl.length > 500) {
+    if (normalizedUrl.length > 500) {
       toast({
         title: "URL too long",
         description: "URL must be less than 500 characters.",
@@ -179,7 +190,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
     const { error } = await supabase.from("links").insert({
       profile_id: profileId,
       title: newTitle,
-      url: newUrl,
+      url: normalizedUrl,
       icon: newIcon || null,
       order_index: links.length,
     });
@@ -285,7 +296,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
               id="url"
               value={newUrl}
               onChange={(e) => setNewUrl(e.target.value)}
-              placeholder="https://example.com"
+              placeholder="https://example.com or www.example.com"
             />
           </div>
           <div className="space-y-2">
