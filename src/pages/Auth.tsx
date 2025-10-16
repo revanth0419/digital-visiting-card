@@ -125,6 +125,12 @@ const Auth = () => {
               description: "Invalid email or password. Please try again.",
               variant: "destructive",
             });
+          } else if (error.message.includes("Email not confirmed")) {
+            toast({
+              title: "Email not verified",
+              description: "Please check your email and verify your account before logging in.",
+              variant: "destructive",
+            });
           } else {
             toast({
               title: "Error",
@@ -181,7 +187,7 @@ const Auth = () => {
         } else {
           toast({
             title: "✅ Signup successful!",
-            description: "Please log in to continue.",
+            description: "Please check your email and verify your account before logging in.",
           });
           setIsLogin(true);
           setPassword("");
