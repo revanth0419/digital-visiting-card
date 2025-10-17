@@ -13,25 +13,25 @@ const Index = () => {
       </div>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-12 text-center">
+      <section className="container mx-auto px-4 py-12 md:py-20 text-center">
         <div className="max-w-4xl mx-auto animate-fade-in">
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <Zap className="w-16 h-16 text-primary" />
+          <div className="flex items-center justify-center gap-3 mb-6 animate-bounce-in">
+            <Zap className="w-12 h-12 md:w-16 md:h-16 text-primary" />
           </div>
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gradient">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 text-gradient animate-slide-up">
             Prism Link Spot
           </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto animate-fade-up">
             Your personalized link hub with style. Share all your important links in one beautiful place.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
             <Link to="/auth">
-              <Button size="lg" variant="gradient" className="text-lg px-8">
+              <Button size="lg" variant="gradient" className="text-base md:text-lg px-6 md:px-8 w-full sm:w-auto hover-scale">
                 Get Started Free
               </Button>
             </Link>
             <Link to="/auth">
-              <Button size="lg" variant="outline" className="text-lg px-8">
+              <Button size="lg" variant="outline" className="text-base md:text-lg px-6 md:px-8 w-full sm:w-auto hover-scale">
                 Sign In
               </Button>
             </Link>
@@ -46,10 +46,11 @@ const Index = () => {
             Everything You Need
           </h2>
           <div className="grid md:grid-cols-3 gap-6">
-            <Card className="glass-card border-2 hover:shadow-elegant transition-all duration-300 animate-scale-in">
+            <Card className="glass-card border-2 hover:shadow-elegant transition-all duration-300 animate-scale-in hover-lift">
               <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 rounded-full bg-gradient-primary mx-auto mb-4 flex items-center justify-center">
-                  <LinkIcon className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center"
+                     style={{ background: "var(--gradient-primary)" }}>
+                  <LinkIcon className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <h3 className="text-xl font-bold mb-2">Unlimited Links</h3>
                 <p className="text-muted-foreground">
@@ -58,10 +59,11 @@ const Index = () => {
               </CardContent>
             </Card>
 
-            <Card className="glass-card border-2 hover:shadow-elegant transition-all duration-300 animate-scale-in" style={{ animationDelay: "0.1s" }}>
+            <Card className="glass-card border-2 hover:shadow-elegant transition-all duration-300 animate-scale-in hover-lift" style={{ animationDelay: "0.1s" }}>
               <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 rounded-full bg-gradient-primary mx-auto mb-4 flex items-center justify-center">
-                  <QrCode className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center"
+                     style={{ background: "var(--gradient-accent)" }}>
+                  <QrCode className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <h3 className="text-xl font-bold mb-2">QR Code</h3>
                 <p className="text-muted-foreground">
@@ -70,10 +72,11 @@ const Index = () => {
               </CardContent>
             </Card>
 
-            <Card className="glass-card border-2 hover:shadow-elegant transition-all duration-300 animate-scale-in" style={{ animationDelay: "0.2s" }}>
+            <Card className="glass-card border-2 hover:shadow-elegant transition-all duration-300 animate-scale-in hover-lift" style={{ animationDelay: "0.2s" }}>
               <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 rounded-full bg-gradient-primary mx-auto mb-4 flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center"
+                     style={{ background: "var(--gradient-vibrant)" }}>
+                  <Sparkles className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <h3 className="text-xl font-bold mb-2">Custom Themes</h3>
                 <p className="text-muted-foreground">

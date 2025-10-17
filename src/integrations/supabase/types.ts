@@ -97,10 +97,14 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          background_type: string | null
+          background_url: string | null
           bio: string | null
           created_at: string | null
           display_name: string | null
           id: string
+          layout_style: string | null
+          profile_theme: string | null
           theme_color: string | null
           updated_at: string | null
           user_id: string
@@ -108,10 +112,14 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          background_type?: string | null
+          background_url?: string | null
           bio?: string | null
           created_at?: string | null
           display_name?: string | null
           id?: string
+          layout_style?: string | null
+          profile_theme?: string | null
           theme_color?: string | null
           updated_at?: string | null
           user_id: string
@@ -119,10 +127,14 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          background_type?: string | null
+          background_url?: string | null
           bio?: string | null
           created_at?: string | null
           display_name?: string | null
           id?: string
+          layout_style?: string | null
+          profile_theme?: string | null
           theme_color?: string | null
           updated_at?: string | null
           user_id?: string

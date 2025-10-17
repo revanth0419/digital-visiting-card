@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ExternalLink, Zap, Image as ImageIcon, Video, X, QrCode } from "lucide-react";
+import { ExternalLink, Zap, Video, QrCode } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,10 @@ type Profile = {
   bio: string | null;
   avatar_url: string | null;
   theme_color: string | null;
+  layout_style: string | null;
+  profile_theme: string | null;
+  background_url: string | null;
+  background_type: string | null;
 };
 
 type Link = {
@@ -55,7 +59,7 @@ const Profile = () => {
       // Security: Only select safe columns, exclude user_id to prevent UUID exposure
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("id, username, display_name, bio, avatar_url, theme_color, created_at, updated_at")
+        .select("id, username, display_name, bio, avatar_url, theme_color, layout_style, profile_theme, background_url, background_type, created_at, updated_at")
         .eq("username", username)
         .single();
 
@@ -112,8 +116,8 @@ const Profile = () => {
   if (!profile) {
     return (
       <div className="min-h-screen gradient-mesh flex items-center justify-center p-4">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">Profile Not Found</h1>
+        <div className="text-center animate-fade-in">
+          <h1 className="text-3xl md:text-4xl font-bold mb-4">Profile Not Found</h1>
           <p className="text-muted-foreground mb-6">
             The profile you're looking for doesn't exist.
           </p>
@@ -126,27 +130,227 @@ const Profile = () => {
   }
 
   const themeColor = profile.theme_color || "#8b5cf6";
+  const layoutStyle = profile.layout_style || "list";
+  const profileTheme = profile.profile_theme || "default";
   const profileUrl = `${window.location.origin}/u/${profile.username}`;
 
+  // Theme backgrounds
+  const getThemeBackground = () => {
+    if (profile.background_url && profile.background_type === "image") {
+      return {
+        backgroundImage: `url(${profile.background_url})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+      };
+    }
+
+    switch (profileTheme) {
+      case "dark":
+        return { backgroundColor: "hsl(240 10% 3.9%)" };
+      case "light":
+        return { backgroundColor: "hsl(0 0% 100%)" };
+      case "gradient":
+        return { background: "linear-gradient(135deg, hsl(330 100% 70%), hsl(280 100% 75%), hsl(240 100% 70%))" };
+      case "minimal":
+        return { background: "linear-gradient(135deg, hsl(220 10% 95%), hsl(220 10% 98%))" };
+      default:
+        return {};
+    }
+  };
+
+  const getTextColor = () => {
+    if (profileTheme === "dark" || profileTheme === "gradient") return "text-white";
+    if (profileTheme === "light" || profileTheme === "minimal") return "text-gray-900";
+    return "";
+  };
+
+  const getCardStyle = () => {
+    if (profileTheme === "dark") return "bg-gray-800/80 border-gray-700";
+    if (profileTheme === "light") return "bg-white/80 border-gray-200";
+    if (profileTheme === "minimal") return "bg-white/90 border-gray-300";
+    return "glass-card border-2";
+  };
+
+  // Render links based on layout
+  const renderLinks = () => {
+    if (links.length === 0) {
+      return (
+        <Card className={`${getCardStyle()} animate-fade-in`}>
+          <CardContent className="p-8 text-center">
+            <p className={`${getTextColor()} opacity-60`}>No links added yet.</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (layoutStyle === "grid") {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {links.map((link, index) => (
+            <a
+              key={link.id}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block animate-scale-in"
+              style={{ animationDelay: `${index * 0.05}s` }}
+            >
+              <Card className={`${getCardStyle()} hover:shadow-elegant transition-all duration-300 hover:scale-105 hover-lift`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    {link.icon && <span className="text-2xl">{link.icon}</span>}
+                    <div className="flex-1 min-w-0">
+                      <span className={`font-medium ${getTextColor()} block truncate`}>{link.title}</span>
+                    </div>
+                    <ExternalLink className="w-5 h-5 opacity-50 flex-shrink-0" />
+                  </div>
+                </CardContent>
+              </Card>
+            </a>
+          ))}
+        </div>
+      );
+    }
+
+    if (layoutStyle === "card") {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {links.map((link, index) => (
+            <a
+              key={link.id}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block animate-bounce-in"
+              style={{ animationDelay: `${index * 0.05}s` }}
+            >
+              <Card className={`${getCardStyle()} hover:shadow-elegant transition-all duration-300 hover:scale-105 hover-lift h-full`}>
+                <CardContent className="p-6 text-center">
+                  {link.icon && (
+                    <div className="text-4xl mb-3">{link.icon}</div>
+                  )}
+                  <span className={`font-medium ${getTextColor()} block`}>{link.title}</span>
+                  <ExternalLink className="w-4 h-4 mx-auto mt-2 opacity-50" />
+                </CardContent>
+              </Card>
+            </a>
+          ))}
+        </div>
+      );
+    }
+
+    // Default list layout
+    return (
+      <div className="space-y-4">
+        {links.map((link, index) => (
+          <a
+            key={link.id}
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block animate-slide-in"
+            style={{ animationDelay: `${index * 0.05}s` }}
+          >
+            <Card className={`${getCardStyle()} hover:shadow-elegant transition-all duration-300 hover:scale-[1.02] hover-lift`}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    {link.icon && <span className="text-2xl">{link.icon}</span>}
+                    <span className={`font-medium ${getTextColor()}`}>{link.title}</span>
+                  </div>
+                  <ExternalLink className="w-5 h-5 opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+          </a>
+        ))}
+      </div>
+    );
+  };
+
+  // Render media gallery
+  const renderMedia = () => {
+    if (media.length === 0) return null;
+
+    const gridClass = layoutStyle === "list" 
+      ? "grid-cols-2 md:grid-cols-3" 
+      : layoutStyle === "card"
+      ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
+      : "grid-cols-2 sm:grid-cols-3";
+
+    return (
+      <div className="mt-12 animate-fade-up">
+        <h2 className={`text-2xl md:text-3xl font-bold text-center mb-6 ${getTextColor()}`}>
+          Media Gallery
+        </h2>
+        <div className={`grid ${gridClass} gap-3 md:gap-4`}>
+          {media.map((item, index) => (
+            <div
+              key={item.id}
+              className="group relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer hover:scale-105 transition-all duration-300 hover:shadow-elegant animate-scale-in"
+              onClick={() => openLightbox(item.url, item.type)}
+              style={{ animationDelay: `${index * 0.05}s` }}
+            >
+              {item.type === "image" ? (
+                <img
+                  src={item.url}
+                  alt={item.title}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="relative w-full h-full">
+                  <video
+                    src={item.url}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <Video className="w-8 md:w-12 h-8 md:h-12 text-white" />
+                  </div>
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3">
+                  <p className="text-white text-xs md:text-sm font-medium truncate">
+                    {item.title}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="min-h-screen gradient-mesh">
-      <div className="max-w-2xl mx-auto px-4 py-12">
+    <div className="min-h-screen relative" style={getThemeBackground()}>
+      {/* Overlay for better text readability on image backgrounds */}
+      {profile.background_url && profile.background_type === "image" && (
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      )}
+      
+      <div className="relative max-w-4xl mx-auto px-4 py-8 md:py-12">
         {/* Profile Header */}
-        <div className="text-center mb-8 animate-fade-in">
-          <Avatar className="w-32 h-32 mx-auto mb-4 border-4 shadow-elegant" style={{ borderColor: themeColor }}>
+        <div className="text-center mb-8 md:mb-12 animate-fade-in">
+          <Avatar 
+            className="w-24 h-24 md:w-32 md:h-32 mx-auto mb-4 border-4 shadow-elegant hover:scale-110 transition-transform" 
+            style={{ borderColor: themeColor }}
+          >
             <AvatarImage src={profile.avatar_url || ""} alt={profile.display_name || profile.username} />
-            <AvatarFallback className="text-3xl" style={{ backgroundColor: themeColor + "20", color: themeColor }}>
+            <AvatarFallback className="text-2xl md:text-3xl" style={{ backgroundColor: themeColor + "20", color: themeColor }}>
               {(profile.display_name || profile.username).charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
 
-          <h1 className="text-3xl font-bold mb-2">
+          <h1 className={`text-2xl md:text-4xl font-bold mb-2 ${getTextColor()}`}>
             {profile.display_name || profile.username}
           </h1>
-          <p className="text-muted-foreground mb-4">@{profile.username}</p>
+          <p className={`${getTextColor()} opacity-70 mb-4`}>@{profile.username}</p>
 
           {profile.bio && (
-            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            <p className={`text-sm md:text-base ${getTextColor()} opacity-80 max-w-md mx-auto mb-4`}>
               {profile.bio}
             </p>
           )}
@@ -157,7 +361,11 @@ const Profile = () => {
               variant="outline"
               size="sm"
               onClick={() => setShowQR(true)}
-              className="gap-2"
+              className="gap-2 hover-scale"
+              style={{ 
+                borderColor: themeColor,
+                color: profileTheme === "dark" || profileTheme === "gradient" ? "white" : "inherit"
+              }}
             >
               <QrCode className="w-4 h-4" />
               Show QR Code
@@ -165,86 +373,17 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Links */}
-        <div className="space-y-4 animate-scale-in">
-          {links.length > 0 ? (
-            links.map((link, index) => (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <Card className="glass-card hover:shadow-elegant transition-all duration-300 hover:scale-105 border-2 hover:border-primary/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1">
-                        {link.icon && (
-                          <span className="text-2xl">{link.icon}</span>
-                        )}
-                        <span className="font-medium">{link.title}</span>
-                      </div>
-                      <ExternalLink className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </a>
-            ))
-          ) : (
-            <Card className="glass-card border-2">
-              <CardContent className="p-8 text-center">
-                <p className="text-muted-foreground">No links added yet.</p>
-              </CardContent>
-            </Card>
-          )}
+        {/* Links Section */}
+        <div className="mb-8 md:mb-12">
+          {renderLinks()}
         </div>
 
         {/* Media Gallery */}
-        {media.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold text-center mb-6">Media Gallery</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {media.map((item) => (
-                <div
-                  key={item.id}
-                  className="group relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer hover:scale-105 transition-transform"
-                  onClick={() => openLightbox(item.url, item.type)}
-                >
-                  {item.type === "image" ? (
-                    <img
-                      src={item.url}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="relative w-full h-full">
-                      <video
-                        src={item.url}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                        <Video className="w-12 h-12 text-white" />
-                      </div>
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
-                      <p className="text-white text-sm font-medium truncate">
-                        {item.title}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {renderMedia()}
 
         {/* Footer */}
-        <div className="text-center mt-12 pt-8 border-t border-border/50">
-          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+        <div className="text-center mt-12 pt-8 border-t border-white/20">
+          <div className={`flex items-center justify-center gap-2 ${getTextColor()} opacity-60`}>
             <Zap className="w-4 h-4" />
             <span className="text-sm">Powered by Prism Link Spot</span>
           </div>
@@ -264,6 +403,7 @@ const Profile = () => {
                 size={200}
                 level="H"
                 includeMargin={true}
+                fgColor={themeColor}
               />
             </div>
             <p className="text-sm text-muted-foreground text-center">
