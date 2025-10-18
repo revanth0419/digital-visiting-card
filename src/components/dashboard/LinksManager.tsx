@@ -167,16 +167,31 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   const fetchLinkMetadata = async (url: string) => {
     setFetchingMetadata(true);
     try {
+      console.log('Fetching metadata for:', url);
       const { data, error } = await supabase.functions.invoke('fetch-link-metadata', {
         body: { url },
       });
 
       if (error) {
         console.error('Error fetching metadata:', error);
+        toast({
+          title: "Couldn't fetch preview",
+          description: "Unable to load product image. You can still add the link.",
+          variant: "default",
+        });
         return { imageUrl: null, title: null };
       }
 
-      return data;
+      console.log('Metadata received:', data);
+      
+      if (data?.imageUrl) {
+        toast({
+          title: "Preview loaded!",
+          description: "Product image fetched successfully.",
+        });
+      }
+
+      return data || { imageUrl: null, title: null };
     } catch (error) {
       console.error('Error fetching metadata:', error);
       return { imageUrl: null, title: null };
@@ -354,11 +369,12 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
               </p>
             )}
             {previewImage && (
-              <div className="mt-2">
+              <div className="mt-2 p-2 border rounded-lg bg-background/50">
+                <p className="text-xs text-muted-foreground mb-1">Product Preview:</p>
                 <img 
                   src={previewImage} 
                   alt="Link preview" 
-                  className="w-20 h-20 object-cover rounded border"
+                  className="w-24 h-24 object-cover rounded"
                 />
               </div>
             )}

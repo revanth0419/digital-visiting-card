@@ -203,7 +203,8 @@ const Profile = () => {
                     <img 
                       src={link.image_url} 
                       alt={link.title} 
-                      className="w-full h-32 object-cover rounded mb-3"
+                      className="w-full h-40 object-cover rounded mb-3"
+                      loading="lazy"
                     />
                   )}
                   <div className="flex items-center gap-3">
@@ -239,7 +240,8 @@ const Profile = () => {
                     <img 
                       src={link.image_url} 
                       alt={link.title} 
-                      className="w-full h-32 object-cover rounded mb-3"
+                      className="w-full h-40 object-cover rounded mb-3"
+                      loading="lazy"
                     />
                   ) : link.icon ? (
                     <div className="text-4xl mb-3">{link.icon}</div>
@@ -273,7 +275,8 @@ const Profile = () => {
                     <img 
                       src={link.image_url} 
                       alt={link.title} 
-                      className="w-16 h-16 object-cover rounded flex-shrink-0"
+                      className="w-20 h-20 object-cover rounded flex-shrink-0"
+                      loading="lazy"
                     />
                   )}
                   <div className="flex items-center justify-between flex-1 min-w-0">
