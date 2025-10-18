@@ -31,6 +31,7 @@ type Link = {
   icon: string | null;
   order_index: number;
   image_url: string | null;
+  is_shopping_link: boolean;
 };
 
 type LinksManagerProps = {
@@ -100,6 +101,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   const [newUrl, setNewUrl] = useState("");
   const [newIcon, setNewIcon] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isShoppingLink, setIsShoppingLink] = useState(false);
 
   const { toast } = useToast();
 
@@ -256,6 +258,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
       icon: newIcon || null,
       image_url: previewImage,
       order_index: links.length,
+      is_shopping_link: isShoppingLink,
     });
 
     if (error) {
@@ -273,6 +276,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
       setNewUrl("");
       setNewIcon("");
       setPreviewImage(null);
+      setIsShoppingLink(false);
       fetchLinks();
     }
 
@@ -388,6 +392,18 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
               placeholder="🔗"
               maxLength={2}
             />
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="isShoppingLink"
+              checked={isShoppingLink}
+              onChange={(e) => setIsShoppingLink(e.target.checked)}
+              className="w-4 h-4 rounded border-input"
+            />
+            <Label htmlFor="isShoppingLink" className="cursor-pointer">
+              Mark as shopping link (displays in Shop section)
+            </Label>
           </div>
           <Button
             onClick={handleAddLink}

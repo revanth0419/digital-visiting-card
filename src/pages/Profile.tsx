@@ -33,6 +33,7 @@ type Link = {
   icon: string | null;
   order_index: number;
   image_url: string | null;
+  is_shopping_link: boolean;
 };
 
 type Media = {
@@ -173,6 +174,132 @@ const Profile = () => {
     return "glass-card border-2";
   };
 
+  const regularLinks = links.filter(link => !link.is_shopping_link);
+  const shoppingLinks = links.filter(link => link.is_shopping_link);
+
+  // Render a section of links (either regular or shopping)
+  const renderLinkSection = (sectionLinks: Link[], sectionTitle: string) => {
+    if (sectionLinks.length === 0) return null;
+
+    if (layoutStyle === "grid") {
+      return (
+        <div className="mb-8">
+          <h3 className={`text-xl font-semibold mb-4 ${getTextColor()}`}>{sectionTitle}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {sectionLinks.map((link, index) => (
+              <a
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block animate-scale-in"
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                <Card className={`${getCardStyle()} hover:shadow-elegant transition-all duration-300 hover:scale-105 hover-lift`}>
+                  <CardContent className="p-4">
+                    {link.image_url && (
+                      <img 
+                        src={link.image_url} 
+                        alt={link.title} 
+                        className="w-full h-40 object-cover rounded mb-3"
+                        loading="lazy"
+                      />
+                    )}
+                    <div className="flex items-center gap-3">
+                      {link.icon && !link.image_url && <span className="text-2xl">{link.icon}</span>}
+                      <div className="flex-1 min-w-0">
+                        <span className={`font-medium ${getTextColor()} block truncate`}>{link.title}</span>
+                      </div>
+                      <ExternalLink className="w-5 h-5 opacity-50 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </a>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (layoutStyle === "card") {
+      return (
+        <div className="mb-8">
+          <h3 className={`text-xl font-semibold mb-4 ${getTextColor()}`}>{sectionTitle}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sectionLinks.map((link, index) => (
+              <a
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block animate-bounce-in"
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                <Card className={`${getCardStyle()} hover:shadow-elegant transition-all duration-300 hover:scale-105 hover-lift h-full`}>
+                  <CardContent className="p-6 text-center">
+                    {link.image_url ? (
+                      <img 
+                        src={link.image_url} 
+                        alt={link.title} 
+                        className="w-full h-40 object-cover rounded mb-3"
+                        loading="lazy"
+                      />
+                    ) : link.icon ? (
+                      <div className="text-4xl mb-3">{link.icon}</div>
+                    ) : null}
+                    <span className={`font-medium ${getTextColor()} block`}>{link.title}</span>
+                    <ExternalLink className="w-4 h-4 mx-auto mt-2 opacity-50" />
+                  </CardContent>
+                </Card>
+              </a>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // Default list layout
+    return (
+      <div className="mb-8">
+        <h3 className={`text-xl font-semibold mb-4 ${getTextColor()}`}>{sectionTitle}</h3>
+        <div className="space-y-4">
+          {sectionLinks.map((link, index) => (
+            <a
+              key={link.id}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block animate-slide-in"
+              style={{ animationDelay: `${index * 0.05}s` }}
+            >
+              <Card className={`${getCardStyle()} hover:shadow-elegant transition-all duration-300 hover:scale-[1.02] hover-lift`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    {link.image_url && (
+                      <img 
+                        src={link.image_url} 
+                        alt={link.title} 
+                        className="w-20 h-20 object-cover rounded flex-shrink-0"
+                        loading="lazy"
+                      />
+                    )}
+                    <div className="flex items-center justify-between flex-1 min-w-0">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {link.icon && !link.image_url && <span className="text-2xl flex-shrink-0">{link.icon}</span>}
+                        <span className={`font-medium ${getTextColor()} truncate`}>{link.title}</span>
+                      </div>
+                      <ExternalLink className="w-5 h-5 opacity-50 ml-2 flex-shrink-0" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </a>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   // Render links based on layout
   const renderLinks = () => {
     if (links.length === 0) {
@@ -185,112 +312,10 @@ const Profile = () => {
       );
     }
 
-    if (layoutStyle === "grid") {
-      return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {links.map((link, index) => (
-            <a
-              key={link.id}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block animate-scale-in"
-              style={{ animationDelay: `${index * 0.05}s` }}
-            >
-              <Card className={`${getCardStyle()} hover:shadow-elegant transition-all duration-300 hover:scale-105 hover-lift`}>
-                <CardContent className="p-4">
-                  {link.image_url && (
-                    <img 
-                      src={link.image_url} 
-                      alt={link.title} 
-                      className="w-full h-40 object-cover rounded mb-3"
-                      loading="lazy"
-                    />
-                  )}
-                  <div className="flex items-center gap-3">
-                    {link.icon && !link.image_url && <span className="text-2xl">{link.icon}</span>}
-                    <div className="flex-1 min-w-0">
-                      <span className={`font-medium ${getTextColor()} block truncate`}>{link.title}</span>
-                    </div>
-                    <ExternalLink className="w-5 h-5 opacity-50 flex-shrink-0" />
-                  </div>
-                </CardContent>
-              </Card>
-            </a>
-          ))}
-        </div>
-      );
-    }
-
-    if (layoutStyle === "card") {
-      return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {links.map((link, index) => (
-            <a
-              key={link.id}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block animate-bounce-in"
-              style={{ animationDelay: `${index * 0.05}s` }}
-            >
-              <Card className={`${getCardStyle()} hover:shadow-elegant transition-all duration-300 hover:scale-105 hover-lift h-full`}>
-                <CardContent className="p-6 text-center">
-                  {link.image_url ? (
-                    <img 
-                      src={link.image_url} 
-                      alt={link.title} 
-                      className="w-full h-40 object-cover rounded mb-3"
-                      loading="lazy"
-                    />
-                  ) : link.icon ? (
-                    <div className="text-4xl mb-3">{link.icon}</div>
-                  ) : null}
-                  <span className={`font-medium ${getTextColor()} block`}>{link.title}</span>
-                  <ExternalLink className="w-4 h-4 mx-auto mt-2 opacity-50" />
-                </CardContent>
-              </Card>
-            </a>
-          ))}
-        </div>
-      );
-    }
-
-    // Default list layout
     return (
-      <div className="space-y-4">
-        {links.map((link, index) => (
-          <a
-            key={link.id}
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block animate-slide-in"
-            style={{ animationDelay: `${index * 0.05}s` }}
-          >
-            <Card className={`${getCardStyle()} hover:shadow-elegant transition-all duration-300 hover:scale-[1.02] hover-lift`}>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
-                  {link.image_url && (
-                    <img 
-                      src={link.image_url} 
-                      alt={link.title} 
-                      className="w-20 h-20 object-cover rounded flex-shrink-0"
-                      loading="lazy"
-                    />
-                  )}
-                  <div className="flex items-center justify-between flex-1 min-w-0">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      {link.icon && !link.image_url && <span className="text-2xl flex-shrink-0">{link.icon}</span>}
-                      <span className={`font-medium ${getTextColor()} truncate`}>{link.title}</span>
-                    </div>
-                    <ExternalLink className="w-5 h-5 opacity-50 ml-2 flex-shrink-0" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </a>
-        ))}
+      <div>
+        {regularLinks.length > 0 && renderLinkSection(regularLinks, "Links")}
+        {shoppingLinks.length > 0 && renderLinkSection(shoppingLinks, "Shop")}
       </div>
     );
   };

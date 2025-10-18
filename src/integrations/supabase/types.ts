@@ -21,6 +21,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean | null
+          is_shopping_link: boolean
           order_index: number
           profile_id: string
           title: string
@@ -33,6 +34,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          is_shopping_link?: boolean
           order_index?: number
           profile_id: string
           title: string
@@ -45,6 +47,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          is_shopping_link?: boolean
           order_index?: number
           profile_id?: string
           title?: string
