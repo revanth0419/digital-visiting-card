@@ -32,6 +32,7 @@ type Link = {
   url: string;
   icon: string | null;
   order_index: number;
+  image_url: string | null;
 };
 
 type Media = {
@@ -198,8 +199,15 @@ const Profile = () => {
             >
               <Card className={`${getCardStyle()} hover:shadow-elegant transition-all duration-300 hover:scale-105 hover-lift`}>
                 <CardContent className="p-4">
+                  {link.image_url && (
+                    <img 
+                      src={link.image_url} 
+                      alt={link.title} 
+                      className="w-full h-32 object-cover rounded mb-3"
+                    />
+                  )}
                   <div className="flex items-center gap-3">
-                    {link.icon && <span className="text-2xl">{link.icon}</span>}
+                    {link.icon && !link.image_url && <span className="text-2xl">{link.icon}</span>}
                     <div className="flex-1 min-w-0">
                       <span className={`font-medium ${getTextColor()} block truncate`}>{link.title}</span>
                     </div>
@@ -227,9 +235,15 @@ const Profile = () => {
             >
               <Card className={`${getCardStyle()} hover:shadow-elegant transition-all duration-300 hover:scale-105 hover-lift h-full`}>
                 <CardContent className="p-6 text-center">
-                  {link.icon && (
+                  {link.image_url ? (
+                    <img 
+                      src={link.image_url} 
+                      alt={link.title} 
+                      className="w-full h-32 object-cover rounded mb-3"
+                    />
+                  ) : link.icon ? (
                     <div className="text-4xl mb-3">{link.icon}</div>
-                  )}
+                  ) : null}
                   <span className={`font-medium ${getTextColor()} block`}>{link.title}</span>
                   <ExternalLink className="w-4 h-4 mx-auto mt-2 opacity-50" />
                 </CardContent>
@@ -254,12 +268,21 @@ const Profile = () => {
           >
             <Card className={`${getCardStyle()} hover:shadow-elegant transition-all duration-300 hover:scale-[1.02] hover-lift`}>
               <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 flex-1">
-                    {link.icon && <span className="text-2xl">{link.icon}</span>}
-                    <span className={`font-medium ${getTextColor()}`}>{link.title}</span>
+                <div className="flex items-center gap-4">
+                  {link.image_url && (
+                    <img 
+                      src={link.image_url} 
+                      alt={link.title} 
+                      className="w-16 h-16 object-cover rounded flex-shrink-0"
+                    />
+                  )}
+                  <div className="flex items-center justify-between flex-1 min-w-0">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {link.icon && !link.image_url && <span className="text-2xl flex-shrink-0">{link.icon}</span>}
+                      <span className={`font-medium ${getTextColor()} truncate`}>{link.title}</span>
+                    </div>
+                    <ExternalLink className="w-5 h-5 opacity-50 ml-2 flex-shrink-0" />
                   </div>
-                  <ExternalLink className="w-5 h-5 opacity-50" />
                 </div>
               </CardContent>
             </Card>

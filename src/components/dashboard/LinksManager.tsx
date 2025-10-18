@@ -30,6 +30,7 @@ type Link = {
   url: string;
   icon: string | null;
   order_index: number;
+  image_url: string | null;
 };
 
 type LinksManagerProps = {
@@ -59,6 +60,13 @@ const SortableLink = ({
       <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
         <GripVertical className="w-5 h-5 text-muted-foreground" />
       </div>
+      {link.image_url && (
+        <img 
+          src={link.image_url} 
+          alt={link.title} 
+          className="w-12 h-12 object-cover rounded"
+        />
+      )}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           {link.icon && <span>{link.icon}</span>}
@@ -85,11 +93,13 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [profileId, setProfileId] = useState("");
+  const [fetchingMetadata, setFetchingMetadata] = useState(false);
 
   // Form state
   const [newTitle, setNewTitle] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const [newIcon, setNewIcon] = useState("");
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const { toast } = useToast();
 
@@ -154,6 +164,43 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
     }
   };
 
+  const fetchLinkMetadata = async (url: string) => {
+    setFetchingMetadata(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-link-metadata', {
+        body: { url },
+      });
+
+      if (error) {
+        console.error('Error fetching metadata:', error);
+        return { imageUrl: null, title: null };
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching metadata:', error);
+      return { imageUrl: null, title: null };
+    } finally {
+      setFetchingMetadata(false);
+    }
+  };
+
+  const handleUrlChange = async (url: string) => {
+    setNewUrl(url);
+    setPreviewImage(null);
+
+    const normalizedUrl = normalizeUrl(url);
+    if (validateUrl(normalizedUrl)) {
+      const metadata = await fetchLinkMetadata(normalizedUrl);
+      if (metadata.imageUrl) {
+        setPreviewImage(metadata.imageUrl);
+      }
+      if (metadata.title && !newTitle) {
+        setNewTitle(metadata.title);
+      }
+    }
+  };
+
   const handleAddLink = async () => {
     if (!newTitle.trim() || !newUrl.trim()) {
       toast({
@@ -192,6 +239,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
       title: newTitle,
       url: normalizedUrl,
       icon: newIcon || null,
+      image_url: previewImage,
       order_index: links.length,
     });
 
@@ -209,6 +257,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
       setNewTitle("");
       setNewUrl("");
       setNewIcon("");
+      setPreviewImage(null);
       fetchLinks();
     }
 
@@ -295,9 +344,24 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
             <Input
               id="url"
               value={newUrl}
-              onChange={(e) => setNewUrl(e.target.value)}
+              onChange={(e) => handleUrlChange(e.target.value)}
               placeholder="https://example.com or www.example.com"
             />
+            {fetchingMetadata && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Fetching preview...
+              </p>
+            )}
+            {previewImage && (
+              <div className="mt-2">
+                <img 
+                  src={previewImage} 
+                  alt="Link preview" 
+                  className="w-20 h-20 object-cover rounded border"
+                />
+              </div>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="icon">Icon (emoji, optional)</Label>
