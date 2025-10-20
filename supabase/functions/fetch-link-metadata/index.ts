@@ -38,20 +38,42 @@ serve(async (req) => {
     // Extract Open Graph metadata
     const ogImageMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
     const ogTitleMatch = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i);
+    const ogPriceMatch = html.match(/<meta[^>]*property=["']og:price:amount["'][^>]*content=["']([^"']+)["']/i);
     
     // Fallback to regular meta tags
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
     const imageMatch = html.match(/<meta[^>]*name=["']image["'][^>]*content=["']([^"']+)["']/i);
+    
+    // Try to extract price from various common patterns
+    const pricePatterns = [
+      /["']price["'][^>]*content=["']([^"']+)["']/i,
+      /₹\s*([0-9,]+(?:\.[0-9]{2})?)/,
+      /\$\s*([0-9,]+(?:\.[0-9]{2})?)/,
+      /price["\s:]+([0-9,]+(?:\.[0-9]{2})?)/i,
+    ];
+    
+    let priceMatch = ogPriceMatch?.[1];
+    if (!priceMatch) {
+      for (const pattern of pricePatterns) {
+        const match = html.match(pattern);
+        if (match) {
+          priceMatch = match[1];
+          break;
+        }
+      }
+    }
 
     const imageUrl = ogImageMatch?.[1] || imageMatch?.[1] || null;
     const title = ogTitleMatch?.[1] || titleMatch?.[1] || null;
+    const price = priceMatch || null;
 
-    console.log('Extracted metadata:', { imageUrl, title });
+    console.log('Extracted metadata:', { imageUrl, title, price });
 
     return new Response(
       JSON.stringify({
         imageUrl,
         title,
+        price,
       }),
       { 
         status: 200, 
@@ -66,6 +88,7 @@ serve(async (req) => {
         error: errorMessage,
         imageUrl: null,
         title: null,
+        price: null,
       }),
       { 
         status: 200, 

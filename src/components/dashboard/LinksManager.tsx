@@ -32,6 +32,7 @@ type Link = {
   order_index: number;
   image_url: string | null;
   is_shopping_link: boolean;
+  price: string | null;
 };
 
 type LinksManagerProps = {
@@ -101,6 +102,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   const [newUrl, setNewUrl] = useState("");
   const [newIcon, setNewIcon] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewPrice, setPreviewPrice] = useState<string | null>(null);
   const [isShoppingLink, setIsShoppingLink] = useState(false);
 
   const { toast } = useToast();
@@ -181,7 +183,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
           description: "Unable to load product image. You can still add the link.",
           variant: "default",
         });
-        return { imageUrl: null, title: null };
+        return { imageUrl: null, title: null, price: null };
       }
 
       console.log('Metadata received:', data);
@@ -193,10 +195,10 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
         });
       }
 
-      return data || { imageUrl: null, title: null };
+      return data || { imageUrl: null, title: null, price: null };
     } catch (error) {
       console.error('Error fetching metadata:', error);
-      return { imageUrl: null, title: null };
+      return { imageUrl: null, title: null, price: null };
     } finally {
       setFetchingMetadata(false);
     }
@@ -205,6 +207,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   const handleUrlChange = async (url: string) => {
     setNewUrl(url);
     setPreviewImage(null);
+    setPreviewPrice(null);
 
     const normalizedUrl = normalizeUrl(url);
     if (validateUrl(normalizedUrl)) {
@@ -214,6 +217,9 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
       }
       if (metadata.title && !newTitle) {
         setNewTitle(metadata.title);
+      }
+      if (metadata.price) {
+        setPreviewPrice(metadata.price);
       }
     }
   };
@@ -257,6 +263,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
       url: normalizedUrl,
       icon: newIcon || null,
       image_url: previewImage,
+      price: previewPrice,
       order_index: links.length,
       is_shopping_link: isShoppingLink,
     });
@@ -272,12 +279,13 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
         title: "Link added!",
         description: "Your new link has been created.",
       });
-      setNewTitle("");
-      setNewUrl("");
-      setNewIcon("");
-      setPreviewImage(null);
-      setIsShoppingLink(false);
-      fetchLinks();
+    setNewTitle("");
+    setNewUrl("");
+    setNewIcon("");
+    setPreviewImage(null);
+    setPreviewPrice(null);
+    setIsShoppingLink(false);
+    fetchLinks();
     }
 
     setAdding(false);
@@ -373,13 +381,16 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
               </p>
             )}
             {previewImage && (
-              <div className="mt-2 p-2 border rounded-lg bg-background/50">
-                <p className="text-xs text-muted-foreground mb-1">Product Preview:</p>
+              <div className="mt-2 p-3 border rounded-lg bg-background/50 space-y-2">
+                <p className="text-xs text-muted-foreground">Product Preview:</p>
                 <img 
                   src={previewImage} 
                   alt="Link preview" 
                   className="w-24 h-24 object-cover rounded"
                 />
+                {previewPrice && (
+                  <p className="text-sm font-semibold text-primary">{previewPrice}</p>
+                )}
               </div>
             )}
           </div>

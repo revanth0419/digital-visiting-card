@@ -23,6 +23,7 @@ export type Database = {
           is_active: boolean | null
           is_shopping_link: boolean
           order_index: number
+          price: string | null
           profile_id: string
           title: string
           updated_at: string | null
@@ -36,6 +37,7 @@ export type Database = {
           is_active?: boolean | null
           is_shopping_link?: boolean
           order_index?: number
+          price?: string | null
           profile_id: string
           title: string
           updated_at?: string | null
@@ -49,6 +51,7 @@ export type Database = {
           is_active?: boolean | null
           is_shopping_link?: boolean
           order_index?: number
+          price?: string | null
           profile_id?: string
           title?: string
           updated_at?: string | null

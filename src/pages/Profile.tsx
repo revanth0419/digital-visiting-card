@@ -34,6 +34,7 @@ type Link = {
   order_index: number;
   image_url: string | null;
   is_shopping_link: boolean;
+  price: string | null;
 };
 
 type Media = {
@@ -181,6 +182,8 @@ const Profile = () => {
   const renderLinkSection = (sectionLinks: Link[], sectionTitle: string) => {
     if (sectionLinks.length === 0) return null;
 
+    const isShoppingSection = sectionTitle === "Shop";
+
     if (layoutStyle === "grid") {
       return (
         <div className="mb-8">
@@ -192,25 +195,37 @@ const Profile = () => {
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block animate-scale-in"
+                className="block animate-scale-in group"
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
-                <Card className={`${getCardStyle()} hover:shadow-elegant transition-all duration-300 hover:scale-105 hover-lift`}>
-                  <CardContent className="p-4">
+                <Card className={`${getCardStyle()} overflow-hidden relative transition-all duration-300 hover:scale-105 hover-lift ${
+                  isShoppingSection && link.image_url ? 'bg-gradient-to-br from-primary/5 via-transparent to-accent/5' : ''
+                }`}>
+                  <CardContent className="p-0">
                     {link.image_url && (
-                      <img 
-                        src={link.image_url} 
-                        alt={link.title} 
-                        className="w-full h-40 object-cover rounded mb-3"
-                        loading="lazy"
-                      />
-                    )}
-                    <div className="flex items-center gap-3">
-                      {link.icon && !link.image_url && <span className="text-2xl">{link.icon}</span>}
-                      <div className="flex-1 min-w-0">
-                        <span className={`font-medium ${getTextColor()} block truncate`}>{link.title}</span>
+                      <div className="relative overflow-hidden">
+                        <img 
+                          src={link.image_url} 
+                          alt={link.title} 
+                          className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
+                          loading="lazy"
+                        />
+                        {isShoppingSection && (
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        )}
                       </div>
-                      <ExternalLink className="w-5 h-5 opacity-50 flex-shrink-0" />
+                    )}
+                    <div className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          {link.icon && !link.image_url && <span className="text-2xl mb-2 block">{link.icon}</span>}
+                          <h4 className={`font-semibold ${getTextColor()} mb-1 line-clamp-2`}>{link.title}</h4>
+                          {link.price && (
+                            <p className="text-lg font-bold text-primary mt-2">{link.price}</p>
+                          )}
+                        </div>
+                        <ExternalLink className="w-5 h-5 opacity-50 flex-shrink-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -232,23 +247,37 @@ const Profile = () => {
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block animate-bounce-in"
+                className="block animate-bounce-in group"
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
-                <Card className={`${getCardStyle()} hover:shadow-elegant transition-all duration-300 hover:scale-105 hover-lift h-full`}>
-                  <CardContent className="p-6 text-center">
+                <Card className={`${getCardStyle()} overflow-hidden relative transition-all duration-300 hover:scale-105 hover-lift h-full ${
+                  isShoppingSection && link.image_url ? 'bg-gradient-to-br from-primary/5 via-transparent to-accent/5' : ''
+                }`}>
+                  <CardContent className="p-0 flex flex-col h-full">
                     {link.image_url ? (
-                      <img 
-                        src={link.image_url} 
-                        alt={link.title} 
-                        className="w-full h-40 object-cover rounded mb-3"
-                        loading="lazy"
-                      />
+                      <div className="relative overflow-hidden">
+                        <img 
+                          src={link.image_url} 
+                          alt={link.title} 
+                          className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
+                          loading="lazy"
+                        />
+                        {isShoppingSection && (
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        )}
+                      </div>
                     ) : link.icon ? (
-                      <div className="text-4xl mb-3">{link.icon}</div>
+                      <div className="text-4xl pt-6 text-center">{link.icon}</div>
                     ) : null}
-                    <span className={`font-medium ${getTextColor()} block`}>{link.title}</span>
-                    <ExternalLink className="w-4 h-4 mx-auto mt-2 opacity-50" />
+                    <div className="p-6 text-center flex-1 flex flex-col justify-between">
+                      <div>
+                        <h4 className={`font-semibold ${getTextColor()} mb-2`}>{link.title}</h4>
+                        {link.price && (
+                          <p className="text-lg font-bold text-primary mt-2">{link.price}</p>
+                        )}
+                      </div>
+                      <ExternalLink className="w-4 h-4 mx-auto mt-4 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    </div>
                   </CardContent>
                 </Card>
               </a>
@@ -269,26 +298,38 @@ const Profile = () => {
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="block animate-slide-in"
+              className="block animate-slide-in group"
               style={{ animationDelay: `${index * 0.05}s` }}
             >
-              <Card className={`${getCardStyle()} hover:shadow-elegant transition-all duration-300 hover:scale-[1.02] hover-lift`}>
+              <Card className={`${getCardStyle()} overflow-hidden relative transition-all duration-300 hover:scale-[1.02] hover-lift ${
+                isShoppingSection && link.image_url ? 'bg-gradient-to-r from-primary/5 via-transparent to-accent/5' : ''
+              }`}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
                     {link.image_url && (
-                      <img 
-                        src={link.image_url} 
-                        alt={link.title} 
-                        className="w-20 h-20 object-cover rounded flex-shrink-0"
-                        loading="lazy"
-                      />
+                      <div className="relative overflow-hidden rounded flex-shrink-0">
+                        <img 
+                          src={link.image_url} 
+                          alt={link.title} 
+                          className="w-24 h-24 object-cover transition-transform duration-500 group-hover:scale-110"
+                          loading="lazy"
+                        />
+                        {isShoppingSection && (
+                          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        )}
+                      </div>
                     )}
                     <div className="flex items-center justify-between flex-1 min-w-0">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        {link.icon && !link.image_url && <span className="text-2xl flex-shrink-0">{link.icon}</span>}
-                        <span className={`font-medium ${getTextColor()} truncate`}>{link.title}</span>
+                      <div className="flex flex-col gap-1 flex-1 min-w-0">
+                        <div className="flex items-center gap-3">
+                          {link.icon && !link.image_url && <span className="text-2xl flex-shrink-0">{link.icon}</span>}
+                          <span className={`font-semibold ${getTextColor()} truncate`}>{link.title}</span>
+                        </div>
+                        {link.price && (
+                          <span className="text-lg font-bold text-primary">{link.price}</span>
+                        )}
                       </div>
-                      <ExternalLink className="w-5 h-5 opacity-50 ml-2 flex-shrink-0" />
+                      <ExternalLink className="w-5 h-5 opacity-50 group-hover:opacity-100 ml-2 flex-shrink-0 transition-opacity" />
                     </div>
                   </div>
                 </CardContent>
