@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ExternalLink, Zap, Video, QrCode } from "lucide-react";
+import { ExternalLink, Zap, Video, QrCode, ChevronDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { QRCodeSVG } from "qrcode.react";
+import { motion, AnimatePresence } from "framer-motion";
 
 type Profile = {
   id: string;
@@ -54,6 +55,7 @@ const Profile = () => {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [lightboxType, setLightboxType] = useState<"image" | "video">("image");
   const [showQR, setShowQR] = useState(false);
+  const [showAllProducts, setShowAllProducts] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -183,55 +185,84 @@ const Profile = () => {
     if (sectionLinks.length === 0) return null;
 
     const isShoppingSection = sectionTitle === "Shop";
+    const displayedLinks = isShoppingSection && !showAllProducts 
+      ? sectionLinks.slice(0, 3) 
+      : sectionLinks;
+    const hasMoreProducts = isShoppingSection && sectionLinks.length > 3;
 
     if (layoutStyle === "grid") {
       return (
         <div className="mb-8">
-          <h3 className={`text-xl font-semibold mb-4 ${getTextColor()}`}>{sectionTitle}</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {sectionLinks.map((link, index) => (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block animate-scale-in group"
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                <Card className={`${getCardStyle()} overflow-hidden relative transition-all duration-300 hover:scale-105 hover-lift ${
-                  isShoppingSection && link.image_url ? 'bg-gradient-to-br from-primary/5 via-transparent to-accent/5' : ''
-                }`}>
-                  <CardContent className="p-0">
-                    {link.image_url && (
-                      <div className="relative overflow-hidden">
-                        <img 
-                          src={link.image_url} 
-                          alt={link.title} 
-                          className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
-                          loading="lazy"
-                        />
-                        {isShoppingSection && (
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        )}
-                      </div>
-                    )}
-                    <div className="p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          {link.icon && !link.image_url && <span className="text-2xl mb-2 block">{link.icon}</span>}
-                          <h4 className={`font-semibold ${getTextColor()} mb-1 line-clamp-2`}>{link.title}</h4>
-                          {link.price && (
-                            <p className="text-lg font-bold text-primary mt-2">{link.price}</p>
+          <h3 className={`text-xl font-semibold mb-6 ${getTextColor()}`}>{sectionTitle}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <AnimatePresence>
+              {displayedLinks.map((link, index) => (
+                <motion.a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block group"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                >
+                  <Card className={`${getCardStyle()} overflow-hidden relative transition-all duration-300 hover:scale-105 hover:shadow-xl ${
+                    isShoppingSection && link.image_url ? 'bg-gradient-to-br from-primary/5 via-transparent to-accent/5' : ''
+                  }`}>
+                    <CardContent className="p-0">
+                      {link.image_url ? (
+                        <div className="relative overflow-hidden h-48">
+                          <img 
+                            src={link.image_url} 
+                            alt={link.title} 
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            loading="lazy"
+                          />
+                          {isShoppingSection && (
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              <div className="absolute bottom-3 left-3 right-3">
+                                <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                  <ExternalLink className="w-5 h-5 text-white" />
+                                </div>
+                              </div>
+                            </div>
                           )}
                         </div>
-                        <ExternalLink className="w-5 h-5 opacity-50 flex-shrink-0 group-hover:opacity-100 transition-opacity" />
+                      ) : null}
+                      <div className="p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            {link.icon && !link.image_url && <span className="text-2xl mb-2 block">{link.icon}</span>}
+                            <h4 className={`font-semibold ${getTextColor()} mb-1 line-clamp-2 text-sm`}>{link.title}</h4>
+                            {link.price && (
+                              <p className="text-lg font-bold text-primary mt-2">{link.price}</p>
+                            )}
+                          </div>
+                          {!link.image_url && (
+                            <ExternalLink className="w-4 h-4 opacity-50 flex-shrink-0 group-hover:opacity-100 transition-opacity" />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </a>
-            ))}
+                    </CardContent>
+                  </Card>
+                </motion.a>
+              ))}
+            </AnimatePresence>
           </div>
+          {hasMoreProducts && (
+            <div className="flex justify-center mt-6">
+              <Button
+                onClick={() => setShowAllProducts(!showAllProducts)}
+                variant="outline"
+                className="group"
+              >
+                {showAllProducts ? "Show Less" : `View All Products (${sectionLinks.length})`}
+                <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showAllProducts ? "rotate-180" : ""}`} />
+              </Button>
+            </div>
+          )}
         </div>
       );
     }
@@ -239,50 +270,75 @@ const Profile = () => {
     if (layoutStyle === "card") {
       return (
         <div className="mb-8">
-          <h3 className={`text-xl font-semibold mb-4 ${getTextColor()}`}>{sectionTitle}</h3>
+          <h3 className={`text-xl font-semibold mb-6 ${getTextColor()}`}>{sectionTitle}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sectionLinks.map((link, index) => (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block animate-bounce-in group"
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                <Card className={`${getCardStyle()} overflow-hidden relative transition-all duration-300 hover:scale-105 hover-lift h-full ${
-                  isShoppingSection && link.image_url ? 'bg-gradient-to-br from-primary/5 via-transparent to-accent/5' : ''
-                }`}>
-                  <CardContent className="p-0 flex flex-col h-full">
-                    {link.image_url ? (
-                      <div className="relative overflow-hidden">
-                        <img 
-                          src={link.image_url} 
-                          alt={link.title} 
-                          className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
-                          loading="lazy"
-                        />
-                        {isShoppingSection && (
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <AnimatePresence>
+              {displayedLinks.map((link, index) => (
+                <motion.a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block group"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                >
+                  <Card className={`${getCardStyle()} overflow-hidden relative transition-all duration-300 hover:scale-105 hover:shadow-xl h-full ${
+                    isShoppingSection && link.image_url ? 'bg-gradient-to-br from-primary/5 via-transparent to-accent/5' : ''
+                  }`}>
+                    <CardContent className="p-0 flex flex-col h-full">
+                      {link.image_url ? (
+                        <div className="relative overflow-hidden h-48">
+                          <img 
+                            src={link.image_url} 
+                            alt={link.title} 
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            loading="lazy"
+                          />
+                          {isShoppingSection && (
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              <div className="absolute bottom-3 right-3">
+                                <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                  <ExternalLink className="w-5 h-5 text-white" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : link.icon ? (
+                        <div className="text-4xl pt-6 text-center">{link.icon}</div>
+                      ) : null}
+                      <div className="p-4 text-center flex-1 flex flex-col justify-between">
+                        <div>
+                          <h4 className={`font-semibold ${getTextColor()} mb-2 line-clamp-2 text-sm`}>{link.title}</h4>
+                          {link.price && (
+                            <p className="text-lg font-bold text-primary mt-2">{link.price}</p>
+                          )}
+                        </div>
+                        {!link.image_url && (
+                          <ExternalLink className="w-4 h-4 mx-auto mt-4 opacity-50 group-hover:opacity-100 transition-opacity" />
                         )}
                       </div>
-                    ) : link.icon ? (
-                      <div className="text-4xl pt-6 text-center">{link.icon}</div>
-                    ) : null}
-                    <div className="p-6 text-center flex-1 flex flex-col justify-between">
-                      <div>
-                        <h4 className={`font-semibold ${getTextColor()} mb-2`}>{link.title}</h4>
-                        {link.price && (
-                          <p className="text-lg font-bold text-primary mt-2">{link.price}</p>
-                        )}
-                      </div>
-                      <ExternalLink className="w-4 h-4 mx-auto mt-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </a>
-            ))}
+                    </CardContent>
+                  </Card>
+                </motion.a>
+              ))}
+            </AnimatePresence>
           </div>
+          {hasMoreProducts && (
+            <div className="flex justify-center mt-6">
+              <Button
+                onClick={() => setShowAllProducts(!showAllProducts)}
+                variant="outline"
+                className="group"
+              >
+                {showAllProducts ? "Show Less" : `View All Products (${sectionLinks.length})`}
+                <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showAllProducts ? "rotate-180" : ""}`} />
+              </Button>
+            </div>
+          )}
         </div>
       );
     }
@@ -290,53 +346,74 @@ const Profile = () => {
     // Default list layout
     return (
       <div className="mb-8">
-        <h3 className={`text-xl font-semibold mb-4 ${getTextColor()}`}>{sectionTitle}</h3>
+        <h3 className={`text-xl font-semibold mb-6 ${getTextColor()}`}>{sectionTitle}</h3>
         <div className="space-y-4">
-          {sectionLinks.map((link, index) => (
-            <a
-              key={link.id}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block animate-slide-in group"
-              style={{ animationDelay: `${index * 0.05}s` }}
-            >
-              <Card className={`${getCardStyle()} overflow-hidden relative transition-all duration-300 hover:scale-[1.02] hover-lift ${
-                isShoppingSection && link.image_url ? 'bg-gradient-to-r from-primary/5 via-transparent to-accent/5' : ''
-              }`}>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
-                    {link.image_url && (
-                      <div className="relative overflow-hidden rounded flex-shrink-0">
-                        <img 
-                          src={link.image_url} 
-                          alt={link.title} 
-                          className="w-24 h-24 object-cover transition-transform duration-500 group-hover:scale-110"
-                          loading="lazy"
-                        />
-                        {isShoppingSection && (
-                          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        )}
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between flex-1 min-w-0">
-                      <div className="flex flex-col gap-1 flex-1 min-w-0">
-                        <div className="flex items-center gap-3">
-                          {link.icon && !link.image_url && <span className="text-2xl flex-shrink-0">{link.icon}</span>}
-                          <span className={`font-semibold ${getTextColor()} truncate`}>{link.title}</span>
+          <AnimatePresence>
+            {displayedLinks.map((link, index) => (
+              <motion.a
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block group"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+              >
+                <Card className={`${getCardStyle()} overflow-hidden relative transition-all duration-300 hover:scale-[1.02] hover:shadow-xl ${
+                  isShoppingSection && link.image_url ? 'bg-gradient-to-r from-primary/5 via-transparent to-accent/5' : ''
+                }`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-4">
+                      {link.image_url && (
+                        <div className="relative overflow-hidden rounded flex-shrink-0 h-20 w-20">
+                          <img 
+                            src={link.image_url} 
+                            alt={link.title} 
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            loading="lazy"
+                          />
+                          {isShoppingSection && (
+                            <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                              <ExternalLink className="w-5 h-5 text-white" />
+                            </div>
+                          )}
                         </div>
-                        {link.price && (
-                          <span className="text-lg font-bold text-primary">{link.price}</span>
+                      )}
+                      <div className="flex items-center justify-between flex-1 min-w-0">
+                        <div className="flex flex-col gap-1 flex-1 min-w-0">
+                          <div className="flex items-center gap-3">
+                            {link.icon && !link.image_url && <span className="text-2xl flex-shrink-0">{link.icon}</span>}
+                            <span className={`font-semibold ${getTextColor()} line-clamp-2 text-sm`}>{link.title}</span>
+                          </div>
+                          {link.price && (
+                            <span className="text-lg font-bold text-primary">{link.price}</span>
+                          )}
+                        </div>
+                        {!link.image_url && (
+                          <ExternalLink className="w-5 h-5 opacity-50 group-hover:opacity-100 ml-2 flex-shrink-0 transition-opacity" />
                         )}
                       </div>
-                      <ExternalLink className="w-5 h-5 opacity-50 group-hover:opacity-100 ml-2 flex-shrink-0 transition-opacity" />
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </a>
-          ))}
+                  </CardContent>
+                </Card>
+              </motion.a>
+            ))}
+          </AnimatePresence>
         </div>
+        {hasMoreProducts && (
+          <div className="flex justify-center mt-6">
+            <Button
+              onClick={() => setShowAllProducts(!showAllProducts)}
+              variant="outline"
+              className="group"
+            >
+              {showAllProducts ? "Show Less" : `View All Products (${sectionLinks.length})`}
+              <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showAllProducts ? "rotate-180" : ""}`} />
+            </Button>
+          </div>
+        )}
       </div>
     );
   };
