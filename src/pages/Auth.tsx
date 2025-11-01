@@ -7,6 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Zap } from "lucide-react";
+import { motion } from "framer-motion";
+import FloatingBackground from "@/components/auth/FloatingBackground";
+import AnimatedCharacter from "@/components/auth/AnimatedCharacter";
+
+type Expression = "neutral" | "happy" | "sad";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,8 +21,18 @@ const Auth = () => {
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [expression, setExpression] = useState<Expression>("neutral");
+  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setCursorPosition({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
 
   useEffect(() => {
     // Check if already logged in
@@ -119,6 +134,9 @@ const Auth = () => {
         });
 
         if (error) {
+          setExpression("sad");
+          setTimeout(() => setExpression("neutral"), 2000);
+          
           if (error.message.includes("Invalid login credentials")) {
             toast({
               title: "Login failed",
@@ -139,11 +157,12 @@ const Auth = () => {
             });
           }
         } else {
+          setExpression("happy");
           toast({
             title: "Welcome back!",
             description: "Successfully logged in.",
           });
-          navigate("/dashboard");
+          setTimeout(() => navigate("/dashboard"), 800);
         }
       } else {
         // Check if email is Gmail (basic validation for Gmail requirement)
@@ -171,6 +190,9 @@ const Auth = () => {
         });
 
         if (error) {
+          setExpression("sad");
+          setTimeout(() => setExpression("neutral"), 2000);
+          
           if (error.message.includes("already registered")) {
             toast({
               title: "Email already exists",
@@ -185,12 +207,16 @@ const Auth = () => {
             });
           }
         } else {
+          setExpression("happy");
           toast({
             title: "✅ Signup successful!",
             description: "Please check your email and verify your account before logging in.",
           });
-          setIsLogin(true);
-          setPassword("");
+          setTimeout(() => {
+            setIsLogin(true);
+            setPassword("");
+            setExpression("neutral");
+          }, 1500);
         }
       }
     } catch (error: any) {
@@ -205,17 +231,51 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen gradient-mesh flex items-center justify-center p-4">
-      <div className="w-full max-w-md animate-fade-in">
+    <div className="min-h-screen gradient-mesh flex items-center justify-center p-4 relative overflow-hidden">
+      <FloatingBackground />
+      
+      <motion.div 
+        className="w-full max-w-md relative z-10"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
+          <motion.div 
+            className="flex items-center justify-center gap-2 mb-4"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+          >
             <Zap className="w-10 h-10 text-primary" />
             <h1 className="text-4xl font-bold text-gradient">Prism Link Spot</h1>
-          </div>
-          <p className="text-muted-foreground">Your personal link hub with style</p>
+          </motion.div>
+          <motion.p 
+            className="text-muted-foreground"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            Your personal link hub with style
+          </motion.p>
         </div>
 
-        <Card className="glass-card border-2 shadow-elegant">
+        {/* Animated Character */}
+        <motion.div 
+          className="flex justify-center mb-6"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.4, type: "spring", stiffness: 150 }}
+        >
+          <AnimatedCharacter expression={expression} cursorPosition={cursorPosition} />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Card className="glass-card border-2 shadow-elegant">
           <CardHeader>
             <CardTitle>
               {isForgotPassword ? "Reset Password" : isLogin ? "Welcome Back" : "Create Account"}
@@ -325,7 +385,8 @@ const Auth = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 };
