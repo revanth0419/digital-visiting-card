@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getSignedUrl, extractStoragePath } from "@/lib/storage";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -109,18 +110,17 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+      // Store the file path (not public URL) for signed URL generation
+      const storagePath = filePath;
 
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: publicUrl })
+        .update({ avatar_url: storagePath })
         .eq('user_id', userId);
 
       if (updateError) throw updateError;
 
-      setAvatarUrl(publicUrl);
+      setAvatarUrl(storagePath);
       toast({
         title: "Success",
         description: "Avatar uploaded successfully!",
@@ -180,11 +180,10 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('media')
-        .getPublicUrl(filePath);
+      // Store the file path (not public URL) for signed URL generation
+      const storagePath = filePath;
 
-      setBackgroundUrl(publicUrl);
+      setBackgroundUrl(storagePath);
       setBackgroundType("image");
       
       toast({

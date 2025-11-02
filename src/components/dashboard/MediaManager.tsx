@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getSignedUrl, extractStoragePath } from "@/lib/storage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +40,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [signedMediaUrls, setSignedMediaUrls] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -67,6 +69,19 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
 
       if (error) throw error;
       setMedia((data as Media[]) || []);
+      
+      // Generate signed URLs for all media
+      const urls: Record<string, string> = {};
+      if (data) {
+        for (const item of data) {
+          const path = extractStoragePath(item.url) || item.url;
+          const signedUrl = await getSignedUrl('media', path);
+          if (signedUrl) {
+            urls[item.id] = signedUrl;
+          }
+        }
+        setSignedMediaUrls(urls);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -155,10 +170,8 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('media')
-        .getPublicUrl(filePath);
+      // Store the file path (not public URL) for signed URL generation
+      const storagePath = filePath;
 
       // Add to database
       const { error: insertError } = await supabase
@@ -166,7 +179,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
         .insert({
           profile_id: profileId,
           type: isImage ? 'image' : 'video',
-          url: publicUrl,
+          url: storagePath,
           title: title.trim(),
           description: description.trim() || null,
           order_index: media.length,

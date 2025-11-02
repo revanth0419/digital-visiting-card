@@ -24,6 +24,8 @@ const Auth = () => {
   const [expression, setExpression] = useState<Expression>("neutral");
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const [isTypingPassword, setIsTypingPassword] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -48,8 +50,13 @@ const Auth = () => {
     return email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
   };
 
-  const validatePassword = (password: string) => {
-    return password.length >= 6;
+  const validatePassword = (password: string): { valid: boolean; message?: string } => {
+    if (password.length < 8) return { valid: false, message: 'Password must be at least 8 characters' };
+    if (!/[a-z]/.test(password)) return { valid: false, message: 'Password must contain at least one lowercase letter' };
+    if (!/[A-Z]/.test(password)) return { valid: false, message: 'Password must contain at least one uppercase letter' };
+    if (!/[0-9]/.test(password)) return { valid: false, message: 'Password must contain at least one number' };
+    if (!/[^a-zA-Z0-9]/.test(password)) return { valid: false, message: 'Password must contain at least one special character' };
+    return { valid: true };
   };
 
   const validateUsername = (username: string) => {
@@ -94,6 +101,18 @@ const Auth = () => {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check rate limiting
+    if (lockoutUntil && Date.now() < lockoutUntil) {
+      const minutesLeft = Math.ceil((lockoutUntil - Date.now()) / 60000);
+      toast({
+        title: "Too many attempts",
+        description: `Please wait ${minutesLeft} minute${minutesLeft > 1 ? 's' : ''} before trying again.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setLoading(true);
 
     // Validation
@@ -107,10 +126,11 @@ const Auth = () => {
       return;
     }
 
-    if (!validatePassword(password)) {
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
       toast({
-        title: "Invalid password",
-        description: "Password must be at least 6 characters long.",
+        title: "Weak password",
+        description: passwordValidation.message || "Password does not meet requirements.",
         variant: "destructive",
       });
       setLoading(false);
@@ -138,6 +158,15 @@ const Auth = () => {
           setExpression("sad");
           setTimeout(() => setExpression("neutral"), 2000);
           
+          // Track failed attempts and implement rate limiting
+          const newAttempts = failedAttempts + 1;
+          setFailedAttempts(newAttempts);
+          
+          if (newAttempts >= 5) {
+            const lockoutMs = Math.pow(2, newAttempts - 5) * 60000; // Exponential backoff
+            setLockoutUntil(Date.now() + lockoutMs);
+          }
+          
           if (error.message.includes("Invalid login credentials")) {
             toast({
               title: "Login failed",
@@ -158,6 +187,9 @@ const Auth = () => {
             });
           }
         } else {
+          // Reset failed attempts on successful login
+          setFailedAttempts(0);
+          setLockoutUntil(null);
           setExpression("happy");
           toast({
             title: "Welcome back!",
@@ -166,18 +198,7 @@ const Auth = () => {
           setTimeout(() => navigate("/dashboard"), 800);
         }
       } else {
-        // Check if email is Gmail (basic validation for Gmail requirement)
-        const emailDomain = email.toLowerCase().split('@')[1];
-        if (emailDomain !== 'gmail.com') {
-          toast({
-            title: "Invalid email domain",
-            description: "Please use a valid Gmail account to sign up.",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
-
+        // Signup flow
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -194,19 +215,18 @@ const Auth = () => {
           setExpression("sad");
           setTimeout(() => setExpression("neutral"), 2000);
           
-          if (error.message.includes("already registered")) {
-            toast({
-              title: "Email already exists",
-              description: "This email is already registered. Please log in instead.",
-              variant: "destructive",
-            });
-          } else {
-            toast({
-              title: "Signup failed",
-              description: error.message,
-              variant: "destructive",
-            });
-          }
+          // Handle username already exists error generically
+          const errorMsg = error.message.toLowerCase().includes('unique') || 
+                          error.message.toLowerCase().includes('duplicate') ||
+                          error.message.toLowerCase().includes('already registered')
+            ? "This username or email may already be taken. Please try different ones."
+            : error.message;
+          
+          toast({
+            title: "Signup failed",
+            description: errorMsg,
+            variant: "destructive",
+          });
         } else {
           setExpression("happy");
           toast({

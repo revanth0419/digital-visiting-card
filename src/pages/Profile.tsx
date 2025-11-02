@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getSignedUrl, extractStoragePath } from "@/lib/storage";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -56,6 +57,9 @@ const Profile = () => {
   const [lightboxType, setLightboxType] = useState<"image" | "video">("image");
   const [showQR, setShowQR] = useState(false);
   const [showAllProducts, setShowAllProducts] = useState(false);
+  const [signedAvatarUrl, setSignedAvatarUrl] = useState<string | null>(null);
+  const [signedBackgroundUrl, setSignedBackgroundUrl] = useState<string | null>(null);
+  const [signedMediaUrls, setSignedMediaUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -74,6 +78,19 @@ const Profile = () => {
       }
 
       setProfile(profileData);
+
+      // Generate signed URLs for avatar and background
+      if (profileData.avatar_url) {
+        const path = extractStoragePath(profileData.avatar_url) || profileData.avatar_url;
+        const signedUrl = await getSignedUrl('avatars', path);
+        setSignedAvatarUrl(signedUrl);
+      }
+
+      if (profileData.background_url && profileData.background_type === 'image') {
+        const path = extractStoragePath(profileData.background_url) || profileData.background_url;
+        const signedUrl = await getSignedUrl('media', path);
+        setSignedBackgroundUrl(signedUrl);
+      }
 
       const { data: linksData } = await supabase
         .from("links")
@@ -94,6 +111,17 @@ const Profile = () => {
 
       if (mediaData) {
         setMedia(mediaData as Media[]);
+        
+        // Generate signed URLs for all media
+        const urls: Record<string, string> = {};
+        for (const item of mediaData) {
+          const path = extractStoragePath(item.url) || item.url;
+          const signedUrl = await getSignedUrl('media', path);
+          if (signedUrl) {
+            urls[item.id] = signedUrl;
+          }
+        }
+        setSignedMediaUrls(urls);
       }
 
       setLoading(false);
@@ -141,9 +169,9 @@ const Profile = () => {
 
   // Theme backgrounds
   const getThemeBackground = () => {
-    if (profile.background_url && profile.background_type === "image") {
+    if (signedBackgroundUrl && profile.background_type === "image") {
       return {
-        backgroundImage: `url(${profile.background_url})`,
+        backgroundImage: `url(${signedBackgroundUrl})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundAttachment: "fixed",
