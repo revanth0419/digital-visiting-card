@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getSignedUrl, extractStoragePath } from "@/lib/storage";
+import { profileViewRateLimiter } from "@/lib/rate-limit";
+import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -49,6 +51,7 @@ type Media = {
 
 const Profile = () => {
   const { username } = useParams();
+  const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [links, setLinks] = useState<Link[]>([]);
   const [media, setMedia] = useState<Media[]>([]);
@@ -63,7 +66,25 @@ const Profile = () => {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!username) return;
+      if (!username) {
+        setLoading(false);
+        return;
+      }
+
+      // Check rate limit for profile viewing
+      const { allowed, retryAfter } = profileViewRateLimiter.checkLimit();
+      if (!allowed) {
+        toast({
+          title: "Too many requests",
+          description: `Please wait ${retryAfter} seconds before viewing more profiles.`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Record profile view attempt
+      profileViewRateLimiter.recordAttempt();
 
       // Security: Only select safe columns, exclude user_id to prevent UUID exposure
       const { data: profileData, error: profileError } = await supabase

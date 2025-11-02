@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getSignedUrl, extractStoragePath } from "@/lib/storage";
+import { uploadRateLimiter } from "@/lib/rate-limit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,6 +98,17 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Check rate limit
+    const { allowed, retryAfter } = uploadRateLimiter.checkLimit();
+    if (!allowed) {
+      toast({
+        title: "Upload limit reached",
+        description: `Please wait ${retryAfter} seconds before uploading again.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validate file type
     const isImage = file.type.startsWith('image/');
     const isVideo = file.type.startsWith('video/');
@@ -149,6 +161,9 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
     try {
       setUploading(true);
       setUploadProgress(0);
+
+      // Record upload attempt
+      uploadRateLimiter.recordAttempt();
 
       const isImage = selectedFile.type.startsWith('image/');
       const fileExt = selectedFile.name.split('.').pop();

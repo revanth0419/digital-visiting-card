@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getSignedUrl, extractStoragePath } from "@/lib/storage";
+import { uploadRateLimiter } from "@/lib/rate-limit";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,6 +72,17 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
       const file = event.target.files?.[0];
       if (!file) return;
 
+      // Check rate limit
+      const { allowed, retryAfter } = uploadRateLimiter.checkLimit();
+      if (!allowed) {
+        toast({
+          title: "Upload limit reached",
+          description: `Please wait ${retryAfter} seconds before uploading again.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (!file.type.startsWith('image/')) {
         toast({
           title: "Invalid file",
@@ -90,6 +102,9 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
       }
 
       setUploading(true);
+
+      // Record upload attempt
+      uploadRateLimiter.recordAttempt();
 
       if (avatarUrl) {
         const oldPath = avatarUrl.split('/').pop();
@@ -141,6 +156,17 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
       const file = event.target.files?.[0];
       if (!file) return;
 
+      // Check rate limit
+      const { allowed, retryAfter } = uploadRateLimiter.checkLimit();
+      if (!allowed) {
+        toast({
+          title: "Upload limit reached",
+          description: `Please wait ${retryAfter} seconds before uploading again.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (!file.type.startsWith('image/')) {
         toast({
           title: "Invalid file",
@@ -160,6 +186,9 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
       }
 
       setUploadingBg(true);
+
+      // Record upload attempt
+      uploadRateLimiter.recordAttempt();
 
       if (backgroundUrl) {
         const oldPath = backgroundUrl.split('/').pop();
