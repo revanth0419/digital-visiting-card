@@ -104,6 +104,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [previewPrice, setPreviewPrice] = useState<string | null>(null);
   const [isShoppingLink, setIsShoppingLink] = useState(false);
+  const [manualImageUrl, setManualImageUrl] = useState("");
 
   const { toast } = useToast();
 
@@ -262,7 +263,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
       title: newTitle,
       url: normalizedUrl,
       icon: newIcon || null,
-      image_url: previewImage,
+      image_url: manualImageUrl || previewImage,
       price: previewPrice,
       order_index: links.length,
       is_shopping_link: isShoppingLink,
@@ -285,6 +286,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
     setPreviewImage(null);
     setPreviewPrice(null);
     setIsShoppingLink(false);
+    setManualImageUrl("");
     fetchLinks();
     }
 
@@ -391,6 +393,31 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
                 {previewPrice && (
                   <p className="text-sm font-semibold text-primary">{previewPrice}</p>
                 )}
+              </div>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="manualImageUrl">Product Image URL (optional)</Label>
+            <Input
+              id="manualImageUrl"
+              value={manualImageUrl}
+              onChange={(e) => setManualImageUrl(e.target.value)}
+              placeholder="https://example.com/product-image.jpg"
+            />
+            <p className="text-xs text-muted-foreground">
+              If automatic preview fails, paste the direct product image URL here
+            </p>
+            {manualImageUrl && (
+              <div className="mt-2 p-3 border rounded-lg bg-background/50 space-y-2">
+                <p className="text-xs text-muted-foreground">Manual Image Preview:</p>
+                <img 
+                  src={manualImageUrl} 
+                  alt="Manual preview" 
+                  className="w-24 h-24 object-cover rounded"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
               </div>
             )}
           </div>
