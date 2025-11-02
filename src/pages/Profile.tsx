@@ -180,10 +180,23 @@ const Profile = () => {
   const regularLinks = links.filter(link => !link.is_shopping_link);
   const shoppingLinks = links.filter(link => link.is_shopping_link);
 
+  // Render empty state for shop section
+  const renderShopEmptyState = () => (
+    <div className="text-center py-12 px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="text-6xl mb-4">🛒</div>
+        <h3 className={`text-xl font-semibold mb-2 ${getTextColor()}`}>No products yet</h3>
+        <p className={`text-sm ${getTextColor()} opacity-60`}>Add your first product link to get started!</p>
+      </motion.div>
+    </div>
+  );
+
   // Render a section of links (either regular or shopping)
   const renderLinkSection = (sectionLinks: Link[], sectionTitle: string) => {
-    if (sectionLinks.length === 0) return null;
-
     const isShoppingSection = sectionTitle === "Shop";
     const displayedLinks = isShoppingSection && !showAllProducts 
       ? sectionLinks.slice(0, 3) 
@@ -193,8 +206,10 @@ const Profile = () => {
     if (layoutStyle === "grid") {
       return (
         <div className="mb-8">
-          <h3 className={`text-xl font-semibold mb-6 ${getTextColor()}`}>{sectionTitle}</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {!isShoppingSection && (
+            <h3 className={`text-xl font-semibold mb-6 ${getTextColor()}`}>{sectionTitle}</h3>
+          )}
+          <div className={`grid gap-4 ${isShoppingSection ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
             <AnimatePresence>
               {displayedLinks.map((link, index) => (
                 <motion.a
@@ -270,8 +285,10 @@ const Profile = () => {
     if (layoutStyle === "card") {
       return (
         <div className="mb-8">
-          <h3 className={`text-xl font-semibold mb-6 ${getTextColor()}`}>{sectionTitle}</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {!isShoppingSection && (
+            <h3 className={`text-xl font-semibold mb-6 ${getTextColor()}`}>{sectionTitle}</h3>
+          )}
+          <div className={`grid gap-4 ${isShoppingSection ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
             <AnimatePresence>
               {displayedLinks.map((link, index) => (
                 <motion.a
@@ -346,7 +363,9 @@ const Profile = () => {
     // Default list layout
     return (
       <div className="mb-8">
-        <h3 className={`text-xl font-semibold mb-6 ${getTextColor()}`}>{sectionTitle}</h3>
+        {!isShoppingSection && (
+          <h3 className={`text-xl font-semibold mb-6 ${getTextColor()}`}>{sectionTitle}</h3>
+        )}
         <div className="space-y-4">
           <AnimatePresence>
             {displayedLinks.map((link, index) => (
@@ -544,7 +563,21 @@ const Profile = () => {
 
         {/* Links Section */}
         <div className="mb-8 md:mb-12">
-          {renderLinks()}
+          {/* Regular Links */}
+          {regularLinks.length > 0 && renderLinkSection(regularLinks, "Links")}
+
+          {/* Shop Section */}
+          <div className="mt-8">
+            <div className="flex items-center gap-2 mb-6">
+              <span className="text-2xl">🛒</span>
+              <h3 className={`text-2xl font-bold ${getTextColor()}`}>Shop</h3>
+            </div>
+            {shoppingLinks.length > 0 ? (
+              renderLinkSection(shoppingLinks, "Shop")
+            ) : (
+              renderShopEmptyState()
+            )}
+          </div>
         </div>
 
         {/* Media Gallery */}

@@ -1,18 +1,27 @@
 import { useEffect, useState } from "react";
 import { motion, useSpring } from "framer-motion";
 
-type Expression = "neutral" | "happy" | "sad";
+type Expression = "neutral" | "happy" | "sad" | "closed-eyes";
 
 interface AnimatedCharacterProps {
   expression: Expression;
   cursorPosition: { x: number; y: number };
+  isTypingPassword?: boolean;
 }
 
-const AnimatedCharacter = ({ expression, cursorPosition }: AnimatedCharacterProps) => {
+const AnimatedCharacter = ({ expression, cursorPosition, isTypingPassword = false }: AnimatedCharacterProps) => {
   const [characterCenter, setCharacterCenter] = useState({ x: 0, y: 0 });
+  const [hasWaved, setHasWaved] = useState(false);
   
   const eyeX = useSpring(0, { stiffness: 150, damping: 15 });
   const eyeY = useSpring(0, { stiffness: 150, damping: 15 });
+
+  // Wave animation on mount
+  useEffect(() => {
+    if (!hasWaved) {
+      setTimeout(() => setHasWaved(true), 500);
+    }
+  }, []);
 
   useEffect(() => {
     const element = document.getElementById('character');
@@ -43,15 +52,81 @@ const AnimatedCharacter = ({ expression, cursorPosition }: AnimatedCharacterProp
     neutral: { d: "M 30 50 Q 50 55 70 50" },
     happy: { d: "M 30 45 Q 50 65 70 45" },
     sad: { d: "M 30 55 Q 50 45 70 55" },
+    "closed-eyes": { d: "M 30 50 Q 50 52 70 50" },
+  };
+
+  // Render eyes based on state
+  const renderEyes = () => {
+    if (isTypingPassword || expression === "closed-eyes") {
+      // Closed eyes (lines instead of circles)
+      return (
+        <>
+          <motion.line
+            x1="30" y1="40" x2="40" y2="40"
+            stroke="hsl(240, 10%, 3.9%)"
+            strokeWidth="3"
+            strokeLinecap="round"
+            initial={{ scaleX: 1 }}
+            animate={{ scaleX: [1, 0.8, 1] }}
+            transition={{ duration: 0.3 }}
+          />
+          <motion.line
+            x1="60" y1="40" x2="70" y2="40"
+            stroke="hsl(240, 10%, 3.9%)"
+            strokeWidth="3"
+            strokeLinecap="round"
+            initial={{ scaleX: 1 }}
+            animate={{ scaleX: [1, 0.8, 1] }}
+            transition={{ duration: 0.3 }}
+          />
+        </>
+      );
+    }
+
+    // Normal eyes
+    return (
+      <>
+        {/* Left Eye */}
+        <g>
+          <ellipse cx="35" cy="40" rx="6" ry="8" fill="white" />
+          <motion.circle
+            cx="35"
+            cy="40"
+            r="3"
+            fill="hsl(240, 10%, 3.9%)"
+            style={{ x: eyeX, y: eyeY }}
+          />
+        </g>
+
+        {/* Right Eye */}
+        <g>
+          <ellipse cx="65" cy="40" rx="6" ry="8" fill="white" />
+          <motion.circle
+            cx="65"
+            cy="40"
+            r="3"
+            fill="hsl(240, 10%, 3.9%)"
+            style={{ x: eyeX, y: eyeY }}
+          />
+        </g>
+      </>
+    );
   };
 
   return (
     <motion.div
       id="character"
       className="relative"
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ type: "spring", stiffness: 200, damping: 20 }}
+      initial={{ scale: 0, opacity: 0, rotate: -10 }}
+      animate={{ 
+        scale: 1, 
+        opacity: 1,
+        rotate: hasWaved ? [0, -15, 15, -10, 10, 0] : 0
+      }}
+      transition={{ 
+        scale: { type: "spring", stiffness: 200, damping: 20 },
+        rotate: { duration: 0.8, delay: 0.3 }
+      }}
     >
       <svg
         width="120"
@@ -79,29 +154,8 @@ const AnimatedCharacter = ({ expression, cursorPosition }: AnimatedCharacterProp
           </linearGradient>
         </defs>
 
-        {/* Left Eye */}
-        <g>
-          <ellipse cx="35" cy="40" rx="6" ry="8" fill="white" />
-          <motion.circle
-            cx="35"
-            cy="40"
-            r="3"
-            fill="hsl(240, 10%, 3.9%)"
-            style={{ x: eyeX, y: eyeY }}
-          />
-        </g>
-
-        {/* Right Eye */}
-        <g>
-          <ellipse cx="65" cy="40" rx="6" ry="8" fill="white" />
-          <motion.circle
-            cx="65"
-            cy="40"
-            r="3"
-            fill="hsl(240, 10%, 3.9%)"
-            style={{ x: eyeX, y: eyeY }}
-          />
-        </g>
+        {/* Eyes */}
+        {renderEyes()}
 
         {/* Mouth */}
         <motion.path

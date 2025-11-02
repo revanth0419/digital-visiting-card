@@ -23,6 +23,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [expression, setExpression] = useState<Expression>("neutral");
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  const [isTypingPassword, setIsTypingPassword] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -267,7 +268,11 @@ const Auth = () => {
           animate={{ scale: 1 }}
           transition={{ delay: 0.4, type: "spring", stiffness: 150 }}
         >
-          <AnimatedCharacter expression={expression} cursorPosition={cursorPosition} />
+          <AnimatedCharacter 
+            expression={expression} 
+            cursorPosition={cursorPosition} 
+            isTypingPassword={isTypingPassword}
+          />
         </motion.div>
 
         <motion.div
@@ -334,6 +339,8 @@ const Auth = () => {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    onFocus={() => setIsTypingPassword(true)}
+                    onBlur={() => setIsTypingPassword(false)}
                     placeholder="••••••••"
                     required
                   />
