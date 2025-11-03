@@ -495,12 +495,6 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
               <p className="text-sm text-muted-foreground mb-3">
                 Upload a custom background image for your profile
               </p>
-              
-              {backgroundUrl && backgroundType === "image" && (
-                <div className="relative w-full h-32 rounded-lg overflow-hidden border-2 mb-2">
-                  <img src={backgroundUrl} alt="Background preview" className="w-full h-full object-cover" />
-                </div>
-              )}
 
               <div className="flex gap-2">
                 <input
