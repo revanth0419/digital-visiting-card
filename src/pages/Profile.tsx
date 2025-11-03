@@ -149,7 +149,112 @@ const Profile = () => {
     };
 
     fetchProfile();
-  }, [username]);
+
+    // Setup realtime subscriptions for live updates
+    if (!username) return;
+
+    const channel = supabase
+      .channel('profile-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: `username=eq.${username}`,
+        },
+        async (payload) => {
+          if (payload.eventType === 'UPDATE') {
+            const updatedProfile = payload.new as Profile;
+            setProfile(updatedProfile);
+            
+            // Update signed URLs for avatar and background
+            if (updatedProfile.avatar_url) {
+              const path = extractStoragePath(updatedProfile.avatar_url) || updatedProfile.avatar_url;
+              const signedUrl = await getSignedUrl('avatars', path);
+              setSignedAvatarUrl(signedUrl);
+            }
+
+            if (updatedProfile.background_url && updatedProfile.background_type === 'image') {
+              const path = extractStoragePath(updatedProfile.background_url) || updatedProfile.background_url;
+              const signedUrl = await getSignedUrl('media', path);
+              setSignedBackgroundUrl(signedUrl);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscribe to links changes
+    const linksChannel = supabase
+      .channel('links-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'links',
+        },
+        async (payload) => {
+          if (profile) {
+            const { data: linksData } = await supabase
+              .from("links")
+              .select("*")
+              .eq("profile_id", profile.id)
+              .eq("is_active", true)
+              .order("order_index");
+
+            if (linksData) {
+              setLinks(linksData);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscribe to media changes
+    const mediaChannel = supabase
+      .channel('media-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'media',
+        },
+        async (payload) => {
+          if (profile) {
+            const { data: mediaData } = await supabase
+              .from("media")
+              .select("*")
+              .eq("profile_id", profile.id)
+              .order("order_index");
+
+            if (mediaData) {
+              setMedia(mediaData as Media[]);
+              
+              // Generate signed URLs for all media
+              const urls: Record<string, string> = {};
+              for (const item of mediaData) {
+                const path = extractStoragePath(item.url) || item.url;
+                const signedUrl = await getSignedUrl('media', path);
+                if (signedUrl) {
+                  urls[item.id] = signedUrl;
+                }
+              }
+              setSignedMediaUrls(urls);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      supabase.removeChannel(linksChannel);
+      supabase.removeChannel(mediaChannel);
+    };
+  }, [username, toast, profile]);
 
   const openLightbox = (url: string, type: "image" | "video") => {
     setLightboxUrl(url);
@@ -522,40 +627,55 @@ const Profile = () => {
           Media Gallery
         </h2>
         <div className={`grid ${gridClass} gap-3 md:gap-4`}>
-          {media.map((item, index) => (
-            <div
-              key={item.id}
-              className="group relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer hover:scale-105 transition-all duration-300 hover:shadow-elegant animate-scale-in"
-              onClick={() => openLightbox(item.url, item.type)}
-              style={{ animationDelay: `${index * 0.05}s` }}
-            >
-              {item.type === "image" ? (
-                <img
-                  src={item.url}
-                  alt={item.title}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="relative w-full h-full">
-                  <video
-                    src={item.url}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                    <Video className="w-8 md:w-12 h-8 md:h-12 text-white" />
+          <AnimatePresence>
+            {media.map((item, index) => {
+              const mediaUrl = signedMediaUrls[item.id] || item.url;
+              return (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  className="group relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer transition-all duration-300 hover:shadow-elegant"
+                  onClick={() => openLightbox(mediaUrl, item.type)}
+                  whileHover={{ scale: 1.05 }}
+                >
+                  {item.type === "image" ? (
+                    <img
+                      src={mediaUrl}
+                      alt={item.title}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="relative w-full h-full">
+                      <video
+                        src={mediaUrl}
+                        className="w-full h-full object-cover"
+                        preload="metadata"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                        <motion.div
+                          whileHover={{ scale: 1.2 }}
+                          transition={{ type: "spring", stiffness: 300 }}
+                        >
+                          <Video className="w-8 md:w-12 h-8 md:h-12 text-white drop-shadow-glow" />
+                        </motion.div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3">
+                      <p className="text-white text-xs md:text-sm font-medium truncate">
+                        {item.title}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3">
-                  <p className="text-white text-xs md:text-sm font-medium truncate">
-                    {item.title}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
       </div>
     );
@@ -575,7 +695,7 @@ const Profile = () => {
             className="w-24 h-24 md:w-32 md:h-32 mx-auto mb-4 border-4 shadow-elegant hover:scale-110 transition-transform" 
             style={{ borderColor: themeColor }}
           >
-            <AvatarImage src={profile.avatar_url || ""} alt={profile.display_name || profile.username} />
+            <AvatarImage src={signedAvatarUrl || profile.avatar_url || ""} alt={profile.display_name || profile.username} />
             <AvatarFallback className="text-2xl md:text-3xl" style={{ backgroundColor: themeColor + "20", color: themeColor }}>
               {(profile.display_name || profile.username).charAt(0).toUpperCase()}
             </AvatarFallback>
@@ -593,21 +713,30 @@ const Profile = () => {
           )}
 
           {/* QR Code Button */}
-          <div className="mt-6">
+          <motion.div 
+            className="mt-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowQR(true)}
-              className="gap-2 hover-scale"
+              className="gap-2 transition-all duration-300"
               style={{ 
                 borderColor: themeColor,
-                color: profileTheme === "dark" || profileTheme === "gradient" ? "white" : "inherit"
+                color: profileTheme === "dark" || profileTheme === "gradient" ? "white" : themeColor,
+                backgroundColor: profileTheme === "dark" || profileTheme === "gradient" ? "rgba(255, 255, 255, 0.1)" : "transparent",
+                boxShadow: `0 0 20px ${themeColor}00`
               }}
             >
               <QrCode className="w-4 h-4" />
-              Show QR Code
+              <span className="font-medium">Show QR Code</span>
             </Button>
-          </div>
+          </motion.div>
         </div>
 
         {/* Links Section */}
@@ -664,37 +793,62 @@ const Profile = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Lightbox Dialog */}
-      <Dialog open={!!lightboxUrl} onOpenChange={() => setLightboxUrl(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>
-              {media.find(m => m.url === lightboxUrl)?.title}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="relative">
-            {lightboxType === "image" ? (
-              <img
-                src={lightboxUrl || ""}
-                alt="Preview"
-                className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
-              />
-            ) : (
-              <video
-                src={lightboxUrl || ""}
-                controls
-                className="w-full h-auto max-h-[70vh] rounded-lg"
-                autoPlay
-              />
-            )}
-            {media.find(m => m.url === lightboxUrl)?.description && (
-              <p className="mt-4 text-sm text-muted-foreground">
-                {media.find(m => m.url === lightboxUrl)?.description}
-              </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Lightbox Dialog with Framer Motion */}
+      <AnimatePresence>
+        {lightboxUrl && (
+          <Dialog open={true} onOpenChange={() => setLightboxUrl(null)}>
+            <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95 border-none">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="relative"
+              >
+                <DialogHeader className="p-4 pb-2">
+                  <DialogTitle className="text-white">
+                    {media.find(m => signedMediaUrls[m.id] === lightboxUrl || m.url === lightboxUrl)?.title}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="relative p-4">
+                  {lightboxType === "image" ? (
+                    <motion.img
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                      src={lightboxUrl}
+                      alt="Preview"
+                      className="w-full h-auto max-h-[75vh] object-contain rounded-lg"
+                    />
+                  ) : (
+                    <motion.video
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                      src={lightboxUrl}
+                      controls
+                      controlsList="nodownload"
+                      className="w-full h-auto max-h-[75vh] rounded-lg"
+                      autoPlay
+                      playsInline
+                    />
+                  )}
+                  {media.find(m => signedMediaUrls[m.id] === lightboxUrl || m.url === lightboxUrl)?.description && (
+                    <motion.p 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="mt-4 text-sm text-gray-300"
+                    >
+                      {media.find(m => signedMediaUrls[m.id] === lightboxUrl || m.url === lightboxUrl)?.description}
+                    </motion.p>
+                  )}
+                </div>
+              </motion.div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

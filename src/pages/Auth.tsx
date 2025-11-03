@@ -11,7 +11,7 @@ import { motion } from "framer-motion";
 import FloatingBackground from "@/components/auth/FloatingBackground";
 import AnimatedCharacter from "@/components/auth/AnimatedCharacter";
 
-type Expression = "neutral" | "happy" | "sad";
+type Expression = "neutral" | "happy" | "sad" | "shocked";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -155,8 +155,11 @@ const Auth = () => {
         });
 
         if (error) {
-          setExpression("sad");
-          setTimeout(() => setExpression("neutral"), 2000);
+          setExpression("shocked");
+          setTimeout(() => {
+            setExpression("sad");
+            setTimeout(() => setExpression("neutral"), 1500);
+          }, 500);
           
           // Track failed attempts and implement rate limiting
           const newAttempts = failedAttempts + 1;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, useSpring } from "framer-motion";
 
-type Expression = "neutral" | "happy" | "sad" | "closed-eyes";
+type Expression = "neutral" | "happy" | "sad" | "closed-eyes" | "shocked";
 
 interface AnimatedCharacterProps {
   expression: Expression;
@@ -53,6 +53,7 @@ const AnimatedCharacter = ({ expression, cursorPosition, isTypingPassword = fals
     happy: { d: "M 30 45 Q 50 65 70 45" },
     sad: { d: "M 30 55 Q 50 45 70 55" },
     "closed-eyes": { d: "M 30 50 Q 50 52 70 50" },
+    shocked: { d: "M 40 50 Q 50 60 60 50" },
   };
 
   // Render eyes based on state
@@ -79,6 +80,41 @@ const AnimatedCharacter = ({ expression, cursorPosition, isTypingPassword = fals
             animate={{ scaleX: [1, 0.8, 1] }}
             transition={{ duration: 0.3 }}
           />
+        </>
+      );
+    }
+
+    if (expression === "shocked" || expression === "sad") {
+      // Wide open eyes for shocked/sad expression
+      return (
+        <>
+          <motion.g
+            animate={expression === "shocked" ? { scale: [1, 1.2, 1] } : {}}
+            transition={{ duration: 0.3, repeat: expression === "shocked" ? 2 : 0 }}
+          >
+            <ellipse cx="35" cy="40" rx="7" ry="10" fill="white" />
+            <motion.circle
+              cx="35"
+              cy="40"
+              r="4"
+              fill="hsl(240, 10%, 3.9%)"
+              style={{ x: eyeX, y: eyeY }}
+            />
+          </motion.g>
+
+          <motion.g
+            animate={expression === "shocked" ? { scale: [1, 1.2, 1] } : {}}
+            transition={{ duration: 0.3, repeat: expression === "shocked" ? 2 : 0 }}
+          >
+            <ellipse cx="65" cy="40" rx="7" ry="10" fill="white" />
+            <motion.circle
+              cx="65"
+              cy="40"
+              r="4"
+              fill="hsl(240, 10%, 3.9%)"
+              style={{ x: eyeX, y: eyeY }}
+            />
+          </motion.g>
         </>
       );
     }
