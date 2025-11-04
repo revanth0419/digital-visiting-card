@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ExternalLink, Zap, Video, QrCode, ChevronDown, Music2, ShoppingBag, MessageCircle } from "lucide-react";
+import { ExternalLink, Zap, Video, QrCode, ChevronDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -89,17 +89,21 @@ const Profile = () => {
 
       setProfile(profileData);
 
-      // Generate signed URLs for avatar and background
+      // Generate signed URLs for avatar and background (only once on load)
       if (profileData.avatar_url) {
         const path = extractStoragePath(profileData.avatar_url) || profileData.avatar_url;
         const signedUrl = await getSignedUrl('avatars', path);
-        setSignedAvatarUrl(signedUrl);
+        if (signedUrl) setSignedAvatarUrl(signedUrl);
+      } else {
+        setSignedAvatarUrl(null);
       }
 
       if (profileData.background_url && profileData.background_type === 'image') {
         const path = extractStoragePath(profileData.background_url) || profileData.background_url;
         const signedUrl = await getSignedUrl('media', path);
-        setSignedBackgroundUrl(signedUrl);
+        if (signedUrl) setSignedBackgroundUrl(signedUrl);
+      } else {
+        setSignedBackgroundUrl(null);
       }
 
       const { data: linksData } = await supabase
@@ -155,19 +159,29 @@ const Profile = () => {
         async (payload) => {
           if (payload.eventType === 'UPDATE') {
             const updatedProfile = payload.new as Profile;
+            const oldProfile = payload.old as Profile;
             setProfile(updatedProfile);
             
-            // Update signed URLs for avatar and background
-            if (updatedProfile.avatar_url) {
-              const path = extractStoragePath(updatedProfile.avatar_url) || updatedProfile.avatar_url;
-              const signedUrl = await getSignedUrl('avatars', path);
-              setSignedAvatarUrl(signedUrl);
+            // Only regenerate signed URLs if the URLs actually changed
+            if (updatedProfile.avatar_url !== oldProfile.avatar_url) {
+              if (updatedProfile.avatar_url) {
+                const path = extractStoragePath(updatedProfile.avatar_url) || updatedProfile.avatar_url;
+                const signedUrl = await getSignedUrl('avatars', path);
+                if (signedUrl) setSignedAvatarUrl(signedUrl);
+              } else {
+                setSignedAvatarUrl(null);
+              }
             }
 
-            if (updatedProfile.background_url && updatedProfile.background_type === 'image') {
-              const path = extractStoragePath(updatedProfile.background_url) || updatedProfile.background_url;
-              const signedUrl = await getSignedUrl('media', path);
-              setSignedBackgroundUrl(signedUrl);
+            if (updatedProfile.background_url !== oldProfile.background_url || 
+                updatedProfile.background_type !== oldProfile.background_type) {
+              if (updatedProfile.background_url && updatedProfile.background_type === 'image') {
+                const path = extractStoragePath(updatedProfile.background_url) || updatedProfile.background_url;
+                const signedUrl = await getSignedUrl('media', path);
+                if (signedUrl) setSignedBackgroundUrl(signedUrl);
+              } else {
+                setSignedBackgroundUrl(null);
+              }
             }
           }
         }
@@ -320,8 +334,9 @@ const Profile = () => {
     return "glass-card border-2";
   };
 
-  const regularLinks = links.filter(link => !link.is_shopping_link);
-  const shoppingLinks = links.filter(link => link.is_shopping_link);
+  // Filter links based on both show_in_links and is_shopping_link
+  const linksTabItems = links.filter(link => (link as any).show_in_links);
+  const shopTabItems = links.filter(link => link.is_shopping_link);
 
   // Render empty state for shop section
   const renderShopEmptyState = () => (
@@ -594,8 +609,8 @@ const Profile = () => {
 
     return (
       <div>
-        {regularLinks.length > 0 && renderLinkSection(regularLinks, "Links")}
-        {shoppingLinks.length > 0 && renderLinkSection(shoppingLinks, "Shop")}
+        {linksTabItems.length > 0 && renderLinkSection(linksTabItems, "Links")}
+        {shopTabItems.length > 0 && renderLinkSection(shopTabItems, "Shop")}
       </div>
     );
   };
@@ -701,39 +716,6 @@ const Profile = () => {
             </p>
           )}
 
-          {/* Social Media Icons */}
-          <div className="flex items-center justify-center gap-4 mb-6">
-            <motion.a
-              href="#"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${getTextColor()} hover:scale-110 transition-transform`}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Music2 className="w-6 h-6" />
-            </motion.a>
-            <motion.a
-              href="#"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${getTextColor()} hover:scale-110 transition-transform`}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <ShoppingBag className="w-6 h-6" />
-            </motion.a>
-            <motion.a
-              href="#"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${getTextColor()} hover:scale-110 transition-transform`}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <MessageCircle className="w-6 h-6" />
-            </motion.a>
-          </div>
 
           {/* QR Code Button */}
           <motion.div 
@@ -784,20 +766,20 @@ const Profile = () => {
               </TabsTrigger>
             </TabsList>
 
-            {/* Links Tab - Shows both regular links and shopping links */}
+            {/* Links Tab - Shows links where show_in_links is true */}
             <TabsContent value="links" className="animate-fade-in">
-              {links.length > 0 ? (
+              {linksTabItems.length > 0 ? (
                 <div className="space-y-8">
-                  {regularLinks.length > 0 && (
+                  {linksTabItems.filter(link => !link.is_shopping_link).length > 0 && (
                     <div>
                       <h3 className={`text-xl font-semibold mb-4 ${getTextColor()}`}>My Links</h3>
-                      {renderLinkSection(regularLinks, "Links")}
+                      {renderLinkSection(linksTabItems.filter(link => !link.is_shopping_link), "Links")}
                     </div>
                   )}
-                  {shoppingLinks.length > 0 && (
+                  {linksTabItems.filter(link => link.is_shopping_link).length > 0 && (
                     <div>
                       <h3 className={`text-xl font-semibold mb-4 ${getTextColor()}`}>Featured Products</h3>
-                      {renderLinkSection(shoppingLinks, "Shop")}
+                      {renderLinkSection(linksTabItems.filter(link => link.is_shopping_link), "Shop")}
                     </div>
                   )}
                 </div>
@@ -812,8 +794,8 @@ const Profile = () => {
 
             {/* Shop Tab - Shows only shopping links */}
             <TabsContent value="shop" className="animate-fade-in">
-              {shoppingLinks.length > 0 ? (
-                renderLinkSection(shoppingLinks, "Shop")
+              {shopTabItems.length > 0 ? (
+                renderLinkSection(shopTabItems, "Shop")
               ) : (
                 renderShopEmptyState()
               )}

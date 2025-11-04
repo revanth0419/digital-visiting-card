@@ -25,6 +25,7 @@ export type Database = {
           order_index: number
           price: string | null
           profile_id: string
+          show_in_links: boolean
           title: string
           updated_at: string | null
           url: string
@@ -39,6 +40,7 @@ export type Database = {
           order_index?: number
           price?: string | null
           profile_id: string
+          show_in_links?: boolean
           title: string
           updated_at?: string | null
           url: string
@@ -53,6 +55,7 @@ export type Database = {
           order_index?: number
           price?: string | null
           profile_id?: string
+          show_in_links?: boolean
           title?: string
           updated_at?: string | null
           url?: string

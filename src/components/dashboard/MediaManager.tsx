@@ -444,6 +444,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
                       <video
                         src={item.url}
                         className="w-full h-full object-cover"
+                        preload="metadata"
                       />
                       <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                         <Video className="w-12 h-12 text-white" />

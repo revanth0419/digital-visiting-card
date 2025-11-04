@@ -32,6 +32,7 @@ type Link = {
   order_index: number;
   image_url: string | null;
   is_shopping_link: boolean;
+  show_in_links: boolean;
   price: string | null;
 };
 
@@ -104,6 +105,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [previewPrice, setPreviewPrice] = useState<string | null>(null);
   const [isShoppingLink, setIsShoppingLink] = useState(false);
+  const [showInLinks, setShowInLinks] = useState(true);
   const [manualImageUrl, setManualImageUrl] = useState("");
 
   const { toast } = useToast();
@@ -267,6 +269,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
       price: previewPrice,
       order_index: links.length,
       is_shopping_link: isShoppingLink,
+      show_in_links: showInLinks,
     });
 
     if (error) {
@@ -286,6 +289,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
     setPreviewImage(null);
     setPreviewPrice(null);
     setIsShoppingLink(false);
+    setShowInLinks(true);
     setManualImageUrl("");
     fetchLinks();
     }
@@ -431,17 +435,31 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
               maxLength={2}
             />
           </div>
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="isShoppingLink"
-              checked={isShoppingLink}
-              onChange={(e) => setIsShoppingLink(e.target.checked)}
-              className="w-4 h-4 rounded border-input"
-            />
-            <Label htmlFor="isShoppingLink" className="cursor-pointer">
-              Mark as shopping link (displays in Shop section)
-            </Label>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="showInLinks"
+                checked={showInLinks}
+                onChange={(e) => setShowInLinks(e.target.checked)}
+                className="w-4 h-4 rounded border-input"
+              />
+              <Label htmlFor="showInLinks" className="cursor-pointer">
+                Show in Links section
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="isShoppingLink"
+                checked={isShoppingLink}
+                onChange={(e) => setIsShoppingLink(e.target.checked)}
+                className="w-4 h-4 rounded border-input"
+              />
+              <Label htmlFor="isShoppingLink" className="cursor-pointer">
+                Show in Shop section
+              </Label>
+            </div>
           </div>
           <Button
             onClick={handleAddLink}
