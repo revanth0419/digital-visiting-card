@@ -89,10 +89,10 @@ const Profile = () => {
 
       setProfile(profileData);
 
-      // Generate signed URLs for avatar and background (only once on load)
+      // Generate signed URLs for avatar and background with longer expiry
       if (profileData.avatar_url) {
         const path = extractStoragePath(profileData.avatar_url) || profileData.avatar_url;
-        const signedUrl = await getSignedUrl('avatars', path);
+        const signedUrl = await getSignedUrl('avatars', path, 7200); // 2 hours
         if (signedUrl) setSignedAvatarUrl(signedUrl);
       } else {
         setSignedAvatarUrl(null);
@@ -100,7 +100,7 @@ const Profile = () => {
 
       if (profileData.background_url && profileData.background_type === 'image') {
         const path = extractStoragePath(profileData.background_url) || profileData.background_url;
-        const signedUrl = await getSignedUrl('media', path);
+        const signedUrl = await getSignedUrl('media', path, 7200); // 2 hours
         if (signedUrl) setSignedBackgroundUrl(signedUrl);
       } else {
         setSignedBackgroundUrl(null);
@@ -126,11 +126,11 @@ const Profile = () => {
       if (mediaData) {
         setMedia(mediaData as Media[]);
         
-        // Generate signed URLs for all media
+        // Generate signed URLs for all media with longer expiry
         const urls: Record<string, string> = {};
         for (const item of mediaData) {
           const path = extractStoragePath(item.url) || item.url;
-          const signedUrl = await getSignedUrl('media', path);
+          const signedUrl = await getSignedUrl('media', path, 7200); // 2 hours
           if (signedUrl) {
             urls[item.id] = signedUrl;
           }
@@ -166,7 +166,7 @@ const Profile = () => {
             if (updatedProfile.avatar_url !== oldProfile.avatar_url) {
               if (updatedProfile.avatar_url) {
                 const path = extractStoragePath(updatedProfile.avatar_url) || updatedProfile.avatar_url;
-                const signedUrl = await getSignedUrl('avatars', path);
+                const signedUrl = await getSignedUrl('avatars', path, 7200); // 2 hours
                 if (signedUrl) setSignedAvatarUrl(signedUrl);
               } else {
                 setSignedAvatarUrl(null);
@@ -177,7 +177,7 @@ const Profile = () => {
                 updatedProfile.background_type !== oldProfile.background_type) {
               if (updatedProfile.background_url && updatedProfile.background_type === 'image') {
                 const path = extractStoragePath(updatedProfile.background_url) || updatedProfile.background_url;
-                const signedUrl = await getSignedUrl('media', path);
+                const signedUrl = await getSignedUrl('media', path, 7200); // 2 hours
                 if (signedUrl) setSignedBackgroundUrl(signedUrl);
               } else {
                 setSignedBackgroundUrl(null);

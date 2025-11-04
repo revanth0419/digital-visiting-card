@@ -427,22 +427,22 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
           {/* Media Grid */}
           {media.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {media.map((item) => (
+                {media.map((item) => (
                 <div
                   key={item.id}
                   className="group relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer"
-                  onClick={() => openLightbox(item.url, item.type)}
+                  onClick={() => openLightbox(signedMediaUrls[item.id] || item.url, item.type)}
                 >
                   {item.type === "image" ? (
                     <img
-                      src={item.url}
+                      src={signedMediaUrls[item.id] || item.url}
                       alt={item.title}
                       className="w-full h-full object-cover transition-transform group-hover:scale-110"
                     />
                   ) : (
                     <div className="relative w-full h-full">
                       <video
-                        src={item.url}
+                        src={signedMediaUrls[item.id] || item.url}
                         className="w-full h-full object-cover"
                         preload="metadata"
                       />
