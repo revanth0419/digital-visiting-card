@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ExternalLink, Zap, Video, QrCode, ChevronDown } from "lucide-react";
+import { ExternalLink, Zap, Video, QrCode, ChevronDown, Music2, ShoppingBag, MessageCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { QRCodeSVG } from "qrcode.react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Profile = {
   id: string;
@@ -63,6 +64,7 @@ const Profile = () => {
   const [signedAvatarUrl, setSignedAvatarUrl] = useState<string | null>(null);
   const [signedBackgroundUrl, setSignedBackgroundUrl] = useState<string | null>(null);
   const [signedMediaUrls, setSignedMediaUrls] = useState<Record<string, string>>({});
+  const [activeTab, setActiveTab] = useState<string>("links");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -71,20 +73,7 @@ const Profile = () => {
         return;
       }
 
-      // Check rate limit for profile viewing
-      const { allowed, retryAfter } = profileViewRateLimiter.checkLimit();
-      if (!allowed) {
-        toast({
-          title: "Too many requests",
-          description: `Please wait ${retryAfter} seconds before viewing more profiles.`,
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Record profile view attempt
-      profileViewRateLimiter.recordAttempt();
+      // Removed rate limiting for better user experience during development
 
       // Security: Only select safe columns, exclude user_id to prevent UUID exposure
       const { data: profileData, error: profileError } = await supabase
@@ -707,10 +696,44 @@ const Profile = () => {
           <p className={`${getTextColor()} opacity-70 mb-4`}>@{profile.username}</p>
 
           {profile.bio && (
-            <p className={`text-sm md:text-base ${getTextColor()} opacity-80 max-w-md mx-auto mb-4`}>
+            <p className={`text-sm md:text-base ${getTextColor()} opacity-80 max-w-md mx-auto mb-6`}>
               {profile.bio}
             </p>
           )}
+
+          {/* Social Media Icons */}
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <motion.a
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${getTextColor()} hover:scale-110 transition-transform`}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Music2 className="w-6 h-6" />
+            </motion.a>
+            <motion.a
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${getTextColor()} hover:scale-110 transition-transform`}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <ShoppingBag className="w-6 h-6" />
+            </motion.a>
+            <motion.a
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${getTextColor()} hover:scale-110 transition-transform`}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <MessageCircle className="w-6 h-6" />
+            </motion.a>
+          </div>
 
           {/* QR Code Button */}
           <motion.div 
@@ -739,23 +762,63 @@ const Profile = () => {
           </motion.div>
         </div>
 
-        {/* Links Section */}
+        {/* Tabs for Links and Shop */}
         <div className="mb-8 md:mb-12">
-          {/* Regular Links */}
-          {regularLinks.length > 0 && renderLinkSection(regularLinks, "Links")}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className={`grid w-full max-w-md mx-auto grid-cols-2 mb-8 ${
+              profileTheme === "dark" || profileTheme === "gradient" 
+                ? "bg-white/10 text-white" 
+                : "bg-gray-900 text-white"
+            }`}>
+              <TabsTrigger 
+                value="links"
+                className="data-[state=active]:bg-white data-[state=active]:text-gray-900"
+              >
+                Links
+              </TabsTrigger>
+              <TabsTrigger 
+                value="shop"
+                className="data-[state=active]:bg-white data-[state=active]:text-gray-900"
+              >
+                Shop
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Shop Section */}
-          <div className="mt-8">
-            <div className="flex items-center gap-2 mb-6">
-              <span className="text-2xl">🛒</span>
-              <h3 className={`text-2xl font-bold ${getTextColor()}`}>Shop</h3>
-            </div>
-            {shoppingLinks.length > 0 ? (
-              renderLinkSection(shoppingLinks, "Shop")
-            ) : (
-              renderShopEmptyState()
-            )}
-          </div>
+            {/* Links Tab - Shows both regular links and shopping links */}
+            <TabsContent value="links" className="animate-fade-in">
+              {links.length > 0 ? (
+                <div className="space-y-8">
+                  {regularLinks.length > 0 && (
+                    <div>
+                      <h3 className={`text-xl font-semibold mb-4 ${getTextColor()}`}>My Links</h3>
+                      {renderLinkSection(regularLinks, "Links")}
+                    </div>
+                  )}
+                  {shoppingLinks.length > 0 && (
+                    <div>
+                      <h3 className={`text-xl font-semibold mb-4 ${getTextColor()}`}>Featured Products</h3>
+                      {renderLinkSection(shoppingLinks, "Shop")}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Card className={`${getCardStyle()} animate-fade-in`}>
+                  <CardContent className="p-8 text-center">
+                    <p className={`${getTextColor()} opacity-60`}>No links added yet.</p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            {/* Shop Tab - Shows only shopping links */}
+            <TabsContent value="shop" className="animate-fade-in">
+              {shoppingLinks.length > 0 ? (
+                renderLinkSection(shoppingLinks, "Shop")
+              ) : (
+                renderShopEmptyState()
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Media Gallery */}
