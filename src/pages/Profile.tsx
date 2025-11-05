@@ -440,13 +440,13 @@ const Profile = () => {
       );
     }
 
-    if (layoutStyle === "card") {
+    if (layoutStyle === "compact") {
       return (
         <div className="mb-8">
           {!isShoppingSection && (
             <h3 className={`text-xl font-semibold mb-6 ${getTextColor()}`}>{sectionTitle}</h3>
           )}
-          <div className={`grid gap-4 ${isShoppingSection ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+          <div className="space-y-2">
             <AnimatePresence>
               {displayedLinks.map((link, index) => (
                 <motion.a
@@ -455,46 +455,35 @@ const Profile = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block group"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2, delay: index * 0.03 }}
                 >
-                  <Card className={`${getCardStyle()} overflow-hidden relative transition-all duration-300 hover:scale-105 hover:shadow-xl h-full ${
-                    isShoppingSection && link.image_url ? 'bg-gradient-to-br from-primary/5 via-transparent to-accent/5' : ''
+                  <Card className={`${getCardStyle()} overflow-hidden relative transition-all duration-200 hover:shadow-lg ${
+                    isShoppingSection && link.image_url ? 'bg-gradient-to-r from-primary/5 to-accent/5' : ''
                   }`}>
-                    <CardContent className="p-0 flex flex-col h-full">
-                      {link.image_url ? (
-                        <div className="relative overflow-hidden h-48">
-                          <img 
-                            src={link.image_url} 
-                            alt={link.title} 
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                            loading="lazy"
-                          />
-                          {isShoppingSection && (
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              <div className="absolute bottom-3 right-3">
-                                <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                                  <ExternalLink className="w-5 h-5 text-white" />
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ) : link.icon ? (
-                        <div className="text-4xl pt-6 text-center">{link.icon}</div>
-                      ) : null}
-                      <div className="p-4 text-center flex-1 flex flex-col justify-between">
-                        <div>
-                          <h4 className={`font-semibold ${getTextColor()} mb-2 line-clamp-2 text-sm`}>{link.title}</h4>
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-3">
+                        {link.image_url ? (
+                          <div className="relative overflow-hidden rounded flex-shrink-0 h-12 w-12">
+                            <img 
+                              src={link.image_url} 
+                              alt={link.title} 
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                              loading="lazy"
+                            />
+                          </div>
+                        ) : link.icon ? (
+                          <span className="text-xl flex-shrink-0">{link.icon}</span>
+                        ) : null}
+                        <div className="flex-1 min-w-0">
+                          <h4 className={`font-medium ${getTextColor()} truncate text-sm`}>{link.title}</h4>
                           {link.price && (
-                            <p className="text-lg font-bold text-primary mt-2">{link.price}</p>
+                            <p className="text-sm font-semibold text-primary mt-0.5">{link.price}</p>
                           )}
                         </div>
-                        {!link.image_url && (
-                          <ExternalLink className="w-4 h-4 mx-auto mt-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-                        )}
+                        <ExternalLink className="w-4 h-4 opacity-40 group-hover:opacity-100 flex-shrink-0 transition-opacity" />
                       </div>
                     </CardContent>
                   </Card>
@@ -503,14 +492,15 @@ const Profile = () => {
             </AnimatePresence>
           </div>
           {hasMoreProducts && (
-            <div className="flex justify-center mt-6">
+            <div className="flex justify-center mt-4">
               <Button
                 onClick={() => setShowAllProducts(!showAllProducts)}
                 variant="outline"
+                size="sm"
                 className="group"
               >
-                {showAllProducts ? "Show Less" : `View All Products (${sectionLinks.length})`}
-                <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showAllProducts ? "rotate-180" : ""}`} />
+                {showAllProducts ? "Show Less" : `View All (${sectionLinks.length})`}
+                <ChevronDown className={`ml-2 h-3 w-3 transition-transform ${showAllProducts ? "rotate-180" : ""}`} />
               </Button>
             </div>
           )}
@@ -621,8 +611,8 @@ const Profile = () => {
 
     const gridClass = layoutStyle === "list" 
       ? "grid-cols-2 md:grid-cols-3" 
-      : layoutStyle === "card"
-      ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
+      : layoutStyle === "compact"
+      ? "grid-cols-3 sm:grid-cols-4 lg:grid-cols-5"
       : "grid-cols-2 sm:grid-cols-3";
 
     return (

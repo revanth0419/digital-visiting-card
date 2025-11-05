@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, Save, LayoutList, LayoutGrid, PanelsTopLeft, Palette, Image } from "lucide-react";
+import { Loader2, Upload, Save, LayoutList, LayoutGrid, Rows3, Palette, Image } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type ProfileEditorProps = {
@@ -417,13 +417,13 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
                   <p className="text-sm font-medium">Grid</p>
                 </button>
                 <button
-                  onClick={() => setLayoutStyle("card")}
+                  onClick={() => setLayoutStyle("compact")}
                   className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${
-                    layoutStyle === "card" ? "border-primary bg-primary/10" : "border-border"
+                    layoutStyle === "compact" ? "border-primary bg-primary/10" : "border-border"
                   }`}
                 >
-                  <PanelsTopLeft className="w-8 h-8 mx-auto mb-2" />
-                  <p className="text-sm font-medium">Card</p>
+                  <Rows3 className="w-8 h-8 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Compact</p>
                 </button>
               </div>
             </div>
