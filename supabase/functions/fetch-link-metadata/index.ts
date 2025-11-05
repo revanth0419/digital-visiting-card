@@ -13,16 +13,59 @@ serve(async (req) => {
   try {
     const { url } = await req.json();
 
-    if (!url) {
+    // Validate URL is provided and is a string
+    if (!url || typeof url !== 'string') {
       return new Response(
-        JSON.stringify({ error: 'URL is required' }),
+        JSON.stringify({ error: 'Valid URL string required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Only allow http and https URLs
+    if (!url.startsWith('https://') && !url.startsWith('http://')) {
+      return new Response(
+        JSON.stringify({ error: 'Only HTTP/HTTPS URLs are allowed' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate URL format and block internal/private IP ranges
+    try {
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname;
+      
+      // Block localhost and private IPs to prevent SSRF attacks
+      const blockedPatterns = [
+        /^localhost$/i,
+        /^127\.\d+\.\d+\.\d+$/,
+        /^10\.\d+\.\d+\.\d+$/,
+        /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/,
+        /^192\.168\.\d+\.\d+$/,
+        /^169\.254\.\d+\.\d+$/, // Cloud metadata endpoint
+        /^\[?::1\]?$/, // IPv6 localhost
+        /^\[?fe80:/i, // IPv6 link-local
+        /^\[?fc00:/i, // IPv6 private
+      ];
+      
+      if (blockedPatterns.some(pattern => pattern.test(hostname))) {
+        return new Response(
+          JSON.stringify({ error: 'URL not allowed' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } catch (urlError) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid URL format' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     console.log('Fetching metadata for URL:', url);
 
-    // Fetch the HTML content with more realistic headers
+    // Fetch the HTML content with more realistic headers and timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -34,7 +77,10 @@ serve(async (req) => {
         'Cache-Control': 'max-age=0',
       },
       redirect: 'follow',
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.error(`Failed to fetch URL: ${response.status}`);
