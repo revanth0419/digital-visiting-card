@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 import { Plus, Trash2, GripVertical, Loader2 } from "lucide-react";
 import {
   DndContext,
@@ -200,7 +201,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
 
       return data || { imageUrl: null, title: null, price: null };
     } catch (error) {
-      console.error('Error fetching metadata:', error);
+      logger.error('Error fetching metadata:', error);
       return { imageUrl: null, title: null, price: null };
     } finally {
       setFetchingMetadata(false);

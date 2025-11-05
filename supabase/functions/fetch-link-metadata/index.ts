@@ -83,7 +83,12 @@ serve(async (req) => {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.error(`Failed to fetch URL: ${response.status}`);
+      // Log for server-side monitoring (safe in edge functions)
+      console.log(JSON.stringify({
+        level: 'error',
+        message: 'Failed to fetch URL',
+        status: response.status,
+      }));
       // Return partial success instead of throwing
       return new Response(
         JSON.stringify({
@@ -147,7 +152,12 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error fetching metadata:', error);
+    // Log for server-side monitoring (safe in edge functions)
+    console.log(JSON.stringify({
+      level: 'error',
+      message: 'Error fetching metadata',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }));
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ 

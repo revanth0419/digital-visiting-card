@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 /**
  * Generate a signed URL for a private storage object
@@ -18,13 +19,13 @@ export const getSignedUrl = async (
       .createSignedUrl(path, expirySeconds);
 
     if (error) {
-      console.error('Failed to generate signed URL:', error);
+      logger.error('Failed to generate signed URL:', error);
       return '';
     }
 
     return data.signedUrl;
   } catch (error) {
-    console.error('Error generating signed URL:', error);
+    logger.error('Error generating signed URL:', error);
     return '';
   }
 };
