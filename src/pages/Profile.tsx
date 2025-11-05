@@ -257,7 +257,7 @@ const Profile = () => {
       supabase.removeChannel(linksChannel);
       supabase.removeChannel(mediaChannel);
     };
-  }, [username, toast, profile]);
+  }, [username]);
 
   const openLightbox = (url: string, type: "image" | "video") => {
     setLightboxUrl(url);
