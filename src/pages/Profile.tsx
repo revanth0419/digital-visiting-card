@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ExternalLink, Zap, Video, QrCode, ChevronDown } from "lucide-react";
+import { ExternalLink, Zap, Video, QrCode, ChevronDown, Link2, ShoppingBag, Image as ImageIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -340,15 +340,32 @@ const Profile = () => {
 
   // Render empty state for shop section
   const renderShopEmptyState = () => (
-    <div className="text-center py-12 px-4">
+    <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-16 text-center border border-white/20">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        initial={{ opacity: 0, y: 30, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
       >
-        <div className="text-6xl mb-4">🛒</div>
-        <h3 className={`text-xl font-semibold mb-2 ${getTextColor()}`}>No products yet</h3>
-        <p className={`text-sm ${getTextColor()} opacity-60`}>Add your first product link to get started!</p>
+        <motion.div
+          animate={{ 
+            rotate: [0, -10, 10, -10, 0],
+            scale: [1, 1.1, 1.1, 1.1, 1]
+          }}
+          transition={{ 
+            duration: 2,
+            ease: "easeInOut",
+            times: [0, 0.2, 0.4, 0.6, 1],
+            repeat: Infinity,
+            repeatDelay: 3
+          }}
+          className="text-8xl mb-6 inline-block"
+        >
+          🛒
+        </motion.div>
+        <h3 className={`text-2xl font-bold mb-3 ${getTextColor()}`}>No products yet</h3>
+        <p className={`text-base ${getTextColor()} opacity-70 max-w-md mx-auto`}>
+          Add your first product link to start showcasing your items!
+        </p>
       </motion.div>
     </div>
   );
@@ -364,10 +381,7 @@ const Profile = () => {
     if (layoutStyle === "grid") {
       return (
         <div className="mb-8">
-          {!isShoppingSection && (
-            <h3 className={`text-xl font-semibold mb-6 ${getTextColor()}`}>{sectionTitle}</h3>
-          )}
-          <div className={`grid gap-4 ${isShoppingSection ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+          <div className={`grid gap-6 ${isShoppingSection ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
             <AnimatePresence>
               {displayedLinks.map((link, index) => (
                 <motion.a
@@ -376,65 +390,102 @@ const Profile = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block group"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -30, scale: 0.95 }}
+                  transition={{ 
+                    duration: 0.4, 
+                    delay: index * 0.08,
+                    ease: [0.23, 1, 0.32, 1]
+                  }}
+                  whileHover={{ y: -8, transition: { duration: 0.2 } }}
                 >
-                  <Card className={`${getCardStyle()} overflow-hidden relative transition-all duration-300 hover:scale-105 hover:shadow-xl ${
-                    isShoppingSection && link.image_url ? 'bg-gradient-to-br from-primary/5 via-transparent to-accent/5' : ''
-                  }`}>
+                  <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl overflow-hidden border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 relative group">
+                    {/* Gradient Border Effect on Hover */}
+                    <div 
+                      className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"
+                      style={{
+                        background: `linear-gradient(135deg, ${themeColor}80, transparent)`,
+                        filter: "blur(20px)",
+                        transform: "scale(1.05)"
+                      }}
+                    />
+                    
                     <CardContent className="p-0">
                       {link.image_url ? (
-                        <div className="relative overflow-hidden h-48">
+                        <div className="relative overflow-hidden aspect-video">
                           <img 
                             src={link.image_url} 
                             alt={link.title} 
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                             loading="lazy"
                           />
-                          {isShoppingSection && (
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              <div className="absolute bottom-3 left-3 right-3">
-                                <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                                  <ExternalLink className="w-5 h-5 text-white" />
-                                </div>
+                          {/* Overlay with gradient on hover */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <div className="absolute bottom-4 left-4">
+                              <div 
+                                className="w-12 h-12 rounded-2xl backdrop-blur-sm flex items-center justify-center"
+                                style={{ backgroundColor: `${themeColor}40` }}
+                              >
+                                <ExternalLink className="w-6 h-6 text-white" />
                               </div>
                             </div>
-                          )}
+                          </div>
                         </div>
                       ) : null}
-                      <div className="p-4">
-                        <div className="flex items-start justify-between gap-2">
+                      <div className="p-6">
+                        <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            {link.icon && !link.image_url && <span className="text-2xl mb-2 block">{link.icon}</span>}
-                            <h4 className={`font-semibold ${getTextColor()} mb-1 line-clamp-2 text-sm`}>{link.title}</h4>
+                            {link.icon && !link.image_url && (
+                              <span className="text-3xl mb-3 block">{link.icon}</span>
+                            )}
+                            <h4 className={`font-bold text-lg ${getTextColor()} mb-2 line-clamp-2`}>
+                              {link.title}
+                            </h4>
                             {link.price && (
-                              <p className="text-lg font-bold text-primary mt-2">{link.price}</p>
+                              <p 
+                                className="text-2xl font-bold mt-3"
+                                style={{ color: themeColor }}
+                              >
+                                {link.price}
+                              </p>
                             )}
                           </div>
                           {!link.image_url && (
-                            <ExternalLink className="w-4 h-4 opacity-50 flex-shrink-0 group-hover:opacity-100 transition-opacity" />
+                            <div 
+                              className="w-10 h-10 rounded-xl flex items-center justify-center opacity-60 group-hover:opacity-100 transition-all duration-300"
+                              style={{ backgroundColor: `${themeColor}20` }}
+                            >
+                              <ExternalLink className="w-5 h-5" style={{ color: themeColor }} />
+                            </div>
                           )}
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
+                  </div>
                 </motion.a>
               ))}
             </AnimatePresence>
           </div>
           {hasMoreProducts && (
-            <div className="flex justify-center mt-6">
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex justify-center mt-8"
+            >
               <Button
                 onClick={() => setShowAllProducts(!showAllProducts)}
-                variant="outline"
-                className="group"
+                size="lg"
+                className="rounded-2xl px-6 group"
+                style={{
+                  background: `linear-gradient(135deg, ${themeColor}, ${themeColor}dd)`,
+                  color: "white"
+                }}
               >
                 {showAllProducts ? "Show Less" : `View All Products (${sectionLinks.length})`}
-                <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showAllProducts ? "rotate-180" : ""}`} />
+                <ChevronDown className={`ml-2 h-5 w-5 transition-transform duration-300 ${showAllProducts ? "rotate-180" : ""}`} />
               </Button>
-            </div>
+            </motion.div>
           )}
         </div>
       );
@@ -443,10 +494,7 @@ const Profile = () => {
     if (layoutStyle === "compact") {
       return (
         <div className="mb-8">
-          {!isShoppingSection && (
-            <h3 className={`text-xl font-semibold mb-6 ${getTextColor()}`}>{sectionTitle}</h3>
-          )}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <AnimatePresence>
               {displayedLinks.map((link, index) => (
                 <motion.a
@@ -455,54 +503,82 @@ const Profile = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block group"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2, delay: index * 0.03 }}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.3, delay: index * 0.04 }}
+                  whileHover={{ x: 6, transition: { duration: 0.15 } }}
                 >
-                  <Card className={`${getCardStyle()} overflow-hidden relative transition-all duration-200 hover:shadow-lg ${
-                    isShoppingSection && link.image_url ? 'bg-gradient-to-r from-primary/5 to-accent/5' : ''
-                  }`}>
-                    <CardContent className="p-3">
+                  <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-2xl overflow-hidden border border-white/20 shadow-md hover:shadow-xl transition-all duration-200 relative">
+                    <div 
+                      className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10"
+                      style={{
+                        background: `linear-gradient(90deg, ${themeColor}30, transparent)`,
+                        filter: "blur(10px)"
+                      }}
+                    />
+                    
+                    <CardContent className="p-4">
                       <div className="flex items-center gap-3">
                         {link.image_url ? (
-                          <div className="relative overflow-hidden rounded flex-shrink-0 h-12 w-12">
+                          <div className="relative overflow-hidden rounded-xl flex-shrink-0 h-14 w-14">
                             <img 
                               src={link.image_url} 
                               alt={link.title} 
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                               loading="lazy"
                             />
                           </div>
                         ) : link.icon ? (
-                          <span className="text-xl flex-shrink-0">{link.icon}</span>
+                          <div 
+                            className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: `${themeColor}20` }}
+                          >
+                            <span className="text-2xl">{link.icon}</span>
+                          </div>
                         ) : null}
                         <div className="flex-1 min-w-0">
-                          <h4 className={`font-medium ${getTextColor()} truncate text-sm`}>{link.title}</h4>
+                          <h4 className={`font-semibold ${getTextColor()} truncate text-base`}>
+                            {link.title}
+                          </h4>
                           {link.price && (
-                            <p className="text-sm font-semibold text-primary mt-0.5">{link.price}</p>
+                            <p className="text-base font-bold mt-1" style={{ color: themeColor }}>
+                              {link.price}
+                            </p>
                           )}
                         </div>
-                        <ExternalLink className="w-4 h-4 opacity-40 group-hover:opacity-100 flex-shrink-0 transition-opacity" />
+                        <div 
+                          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 opacity-40 group-hover:opacity-100 transition-all duration-200"
+                          style={{ backgroundColor: `${themeColor}20` }}
+                        >
+                          <ExternalLink className="w-4 h-4" style={{ color: themeColor }} />
+                        </div>
                       </div>
                     </CardContent>
-                  </Card>
+                  </div>
                 </motion.a>
               ))}
             </AnimatePresence>
           </div>
           {hasMoreProducts && (
-            <div className="flex justify-center mt-4">
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex justify-center mt-6"
+            >
               <Button
                 onClick={() => setShowAllProducts(!showAllProducts)}
-                variant="outline"
-                size="sm"
-                className="group"
+                size="lg"
+                className="rounded-2xl px-6"
+                style={{
+                  background: `linear-gradient(135deg, ${themeColor}, ${themeColor}dd)`,
+                  color: "white"
+                }}
               >
                 {showAllProducts ? "Show Less" : `View All (${sectionLinks.length})`}
-                <ChevronDown className={`ml-2 h-3 w-3 transition-transform ${showAllProducts ? "rotate-180" : ""}`} />
+                <ChevronDown className={`ml-2 h-4 w-4 transition-transform duration-300 ${showAllProducts ? "rotate-180" : ""}`} />
               </Button>
-            </div>
+            </motion.div>
           )}
         </div>
       );
@@ -511,9 +587,6 @@ const Profile = () => {
     // Default list layout
     return (
       <div className="mb-8">
-        {!isShoppingSection && (
-          <h3 className={`text-xl font-semibold mb-6 ${getTextColor()}`}>{sectionTitle}</h3>
-        )}
         <div className="space-y-4">
           <AnimatePresence>
             {displayedLinks.map((link, index) => (
@@ -523,63 +596,94 @@ const Profile = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block group"
-                initial={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: -30 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
+                exit={{ opacity: 0, x: 30 }}
+                transition={{ duration: 0.4, delay: index * 0.06 }}
+                whileHover={{ x: 8, transition: { duration: 0.2 } }}
               >
-                <Card className={`${getCardStyle()} overflow-hidden relative transition-all duration-300 hover:scale-[1.02] hover:shadow-xl ${
-                  isShoppingSection && link.image_url ? 'bg-gradient-to-r from-primary/5 via-transparent to-accent/5' : ''
-                }`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
+                <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl overflow-hidden border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-300 relative">
+                  {/* Gradient glow on hover */}
+                  <div 
+                    className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"
+                    style={{
+                      background: `linear-gradient(90deg, ${themeColor}40, transparent)`,
+                      filter: "blur(15px)"
+                    }}
+                  />
+                  
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-5">
                       {link.image_url && (
-                        <div className="relative overflow-hidden rounded flex-shrink-0 h-20 w-20">
+                        <div className="relative overflow-hidden rounded-2xl flex-shrink-0 h-24 w-24">
                           <img 
                             src={link.image_url} 
                             alt={link.title} 
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                             loading="lazy"
                           />
-                          {isShoppingSection && (
-                            <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                              <ExternalLink className="w-5 h-5 text-white" />
-                            </div>
-                          )}
+                          <div 
+                            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center"
+                            style={{ background: `linear-gradient(135deg, ${themeColor}60, ${themeColor}30)` }}
+                          >
+                            <ExternalLink className="w-6 h-6 text-white" />
+                          </div>
                         </div>
                       )}
                       <div className="flex items-center justify-between flex-1 min-w-0">
-                        <div className="flex flex-col gap-1 flex-1 min-w-0">
-                          <div className="flex items-center gap-3">
-                            {link.icon && !link.image_url && <span className="text-2xl flex-shrink-0">{link.icon}</span>}
-                            <span className={`font-semibold ${getTextColor()} line-clamp-2 text-sm`}>{link.title}</span>
+                        <div className="flex flex-col gap-2 flex-1 min-w-0">
+                          <div className="flex items-center gap-4">
+                            {link.icon && !link.image_url && (
+                              <span className="text-3xl flex-shrink-0">{link.icon}</span>
+                            )}
+                            <span className={`font-bold text-lg ${getTextColor()} line-clamp-2`}>
+                              {link.title}
+                            </span>
                           </div>
                           {link.price && (
-                            <span className="text-lg font-bold text-primary">{link.price}</span>
+                            <span 
+                              className="text-2xl font-bold"
+                              style={{ color: themeColor }}
+                            >
+                              {link.price}
+                            </span>
                           )}
                         </div>
                         {!link.image_url && (
-                          <ExternalLink className="w-5 h-5 opacity-50 group-hover:opacity-100 ml-2 flex-shrink-0 transition-opacity" />
+                          <div 
+                            className="w-12 h-12 rounded-2xl flex items-center justify-center ml-4 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-all duration-300"
+                            style={{ backgroundColor: `${themeColor}20` }}
+                          >
+                            <ExternalLink className="w-6 h-6" style={{ color: themeColor }} />
+                          </div>
                         )}
                       </div>
                     </div>
                   </CardContent>
-                </Card>
+                </div>
               </motion.a>
             ))}
           </AnimatePresence>
         </div>
         {hasMoreProducts && (
-          <div className="flex justify-center mt-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex justify-center mt-8"
+          >
             <Button
               onClick={() => setShowAllProducts(!showAllProducts)}
-              variant="outline"
-              className="group"
+              size="lg"
+              className="rounded-2xl px-6"
+              style={{
+                background: `linear-gradient(135deg, ${themeColor}, ${themeColor}dd)`,
+                color: "white"
+              }}
             >
               {showAllProducts ? "Show Less" : `View All Products (${sectionLinks.length})`}
-              <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showAllProducts ? "rotate-180" : ""}`} />
+              <ChevronDown className={`ml-2 h-5 w-5 transition-transform duration-300 ${showAllProducts ? "rotate-180" : ""}`} />
             </Button>
-          </div>
+          </motion.div>
         )}
       </div>
     );
@@ -605,65 +709,84 @@ const Profile = () => {
     );
   };
 
-  // Render media gallery
+  // Render media gallery with Masonry-style layout
   const renderMedia = () => {
     if (media.length === 0) return null;
 
-    const gridClass = layoutStyle === "list" 
-      ? "grid-cols-2 md:grid-cols-3" 
-      : layoutStyle === "compact"
-      ? "grid-cols-3 sm:grid-cols-4 lg:grid-cols-5"
-      : "grid-cols-2 sm:grid-cols-3";
-
     return (
-      <div className="mt-12 animate-fade-up">
-        <h2 className={`text-2xl md:text-3xl font-bold text-center mb-6 ${getTextColor()}`}>
-          Media Gallery
-        </h2>
-        <div className={`grid ${gridClass} gap-3 md:gap-4`}>
+      <div className="space-y-4">
+        {/* Masonry Grid */}
+        <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 space-y-4">
           <AnimatePresence>
             {media.map((item, index) => {
               const mediaUrl = signedMediaUrls[item.id] || item.url;
               return (
                 <motion.div
                   key={item.id}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                  className="group relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer transition-all duration-300 hover:shadow-elegant"
+                  transition={{ 
+                    duration: 0.5, 
+                    delay: index * 0.1,
+                    ease: [0.23, 1, 0.32, 1]
+                  }}
+                  className="group relative rounded-3xl overflow-hidden cursor-pointer break-inside-avoid mb-4"
                   onClick={() => openLightbox(mediaUrl, item.type)}
-                  whileHover={{ scale: 1.05 }}
+                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
                 >
-                  {item.type === "image" ? (
-                    <img
-                      src={mediaUrl}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
+                  <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl overflow-hidden border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300">
+                    {/* Glow effect on hover */}
+                    <div 
+                      className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"
+                      style={{
+                        background: `linear-gradient(135deg, ${themeColor}60, transparent)`,
+                        filter: "blur(20px)",
+                        transform: "scale(1.1)"
+                      }}
                     />
-                  ) : (
-                    <div className="relative w-full h-full">
-                      <video
+                    
+                    {item.type === "image" ? (
+                      <img
                         src={mediaUrl}
-                        className="w-full h-full object-cover"
-                        preload="metadata"
+                        alt={item.title}
+                        className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
                       />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                        <motion.div
-                          whileHover={{ scale: 1.2 }}
-                          transition={{ type: "spring", stiffness: 300 }}
+                    ) : (
+                      <div className="relative w-full">
+                        <video
+                          src={mediaUrl}
+                          className="w-full h-auto object-cover"
+                          preload="metadata"
+                        />
+                        <div 
+                          className="absolute inset-0 flex items-center justify-center backdrop-blur-sm"
+                          style={{ background: `${themeColor}40` }}
                         >
-                          <Video className="w-8 md:w-12 h-8 md:h-12 text-white drop-shadow-glow" />
-                        </motion.div>
+                          <motion.div
+                            whileHover={{ scale: 1.2, rotate: 5 }}
+                            transition={{ type: "spring", stiffness: 300 }}
+                            className="bg-white/20 backdrop-blur-md rounded-full p-6"
+                          >
+                            <Video className="w-10 h-10 text-white" />
+                          </motion.div>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3">
-                      <p className="text-white text-xs md:text-sm font-medium truncate">
-                        {item.title}
-                      </p>
+                    )}
+                    
+                    {/* Overlay with title */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <p className="text-white text-sm font-bold mb-1">
+                          {item.title}
+                        </p>
+                        {item.description && (
+                          <p className="text-white/80 text-xs line-clamp-2">
+                            {item.description}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -676,204 +799,349 @@ const Profile = () => {
   };
 
   return (
-    <div className="min-h-screen relative" style={getThemeBackground()}>
+    <div className="min-h-screen relative overflow-hidden" style={getThemeBackground()}>
+      {/* Animated Background Particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute w-96 h-96 -top-48 -left-48 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute w-96 h-96 -bottom-48 -right-48 bg-accent/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
+        <div className="absolute w-64 h-64 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-secondary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "2s" }} />
+      </div>
+
       {/* Overlay for better text readability on image backgrounds */}
       {profile.background_url && profile.background_type === "image" && (
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60 backdrop-blur-sm"></div>
       )}
       
-      <div className="relative max-w-4xl mx-auto px-4 py-8 md:py-12">
-        {/* Profile Header */}
-        <div className="text-center mb-8 md:mb-12 animate-fade-in">
-          <Avatar 
-            className="w-24 h-24 md:w-32 md:h-32 mx-auto mb-4 border-4 shadow-elegant hover:scale-110 transition-transform" 
-            style={{ borderColor: themeColor }}
-          >
-            <AvatarImage src={signedAvatarUrl || profile.avatar_url || ""} alt={profile.display_name || profile.username} />
-            <AvatarFallback className="text-2xl md:text-3xl" style={{ backgroundColor: themeColor + "20", color: themeColor }}>
-              {(profile.display_name || profile.username).charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-
-          <h1 className={`text-2xl md:text-4xl font-bold mb-2 ${getTextColor()}`}>
-            {profile.display_name || profile.username}
-          </h1>
-          <p className={`${getTextColor()} opacity-70 mb-4`}>@{profile.username}</p>
-
-          {profile.bio && (
-            <p className={`text-sm md:text-base ${getTextColor()} opacity-80 max-w-md mx-auto mb-6`}>
-              {profile.bio}
-            </p>
-          )}
-
-
-          {/* QR Code Button */}
-          <motion.div 
-            className="mt-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowQR(true)}
-              className="gap-2 transition-all duration-300"
-              style={{ 
-                borderColor: themeColor,
-                color: profileTheme === "dark" || profileTheme === "gradient" ? "white" : themeColor,
-                backgroundColor: profileTheme === "dark" || profileTheme === "gradient" ? "rgba(255, 255, 255, 0.1)" : "transparent",
-                boxShadow: `0 0 20px ${themeColor}00`
-              }}
+      <div className="relative max-w-5xl mx-auto px-4 py-8 md:py-16">
+        {/* Profile Header - Card Style with Glassmorphism */}
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="text-center mb-12"
+        >
+          <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-8 md:p-12 shadow-2xl border border-white/20">
+            {/* Profile Picture with Gradient Glow */}
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="relative inline-block mb-6"
             >
-              <QrCode className="w-4 h-4" />
-              <span className="font-medium">Show QR Code</span>
-            </Button>
-          </motion.div>
-        </div>
-
-        {/* Tabs for Links and Shop */}
-        <div className="mb-8 md:mb-12">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className={`grid w-full max-w-md mx-auto grid-cols-2 mb-8 ${
-              profileTheme === "dark" || profileTheme === "gradient" 
-                ? "bg-white/10 text-white" 
-                : "bg-gray-900 text-white"
-            }`}>
-              <TabsTrigger 
-                value="links"
-                className="data-[state=active]:bg-white data-[state=active]:text-gray-900"
+              <div 
+                className="absolute inset-0 rounded-full blur-2xl opacity-60 animate-pulse"
+                style={{ 
+                  background: `linear-gradient(135deg, ${themeColor}, ${themeColor}80)`,
+                  transform: "scale(1.1)"
+                }}
+              />
+              <Avatar 
+                className="w-32 h-32 md:w-40 md:h-40 relative border-4 border-white/30 shadow-2xl hover:scale-105 transition-all duration-300" 
+                style={{ 
+                  borderColor: `${themeColor}40`,
+                  boxShadow: `0 0 40px ${themeColor}60`
+                }}
               >
-                Links
-              </TabsTrigger>
-              <TabsTrigger 
-                value="shop"
-                className="data-[state=active]:bg-white data-[state=active]:text-gray-900"
-              >
-                Shop
-              </TabsTrigger>
-            </TabsList>
+                <AvatarImage src={signedAvatarUrl || profile.avatar_url || ""} alt={profile.display_name || profile.username} />
+                <AvatarFallback className="text-3xl md:text-4xl font-bold" style={{ backgroundColor: themeColor + "30", color: themeColor }}>
+                  {(profile.display_name || profile.username).charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </motion.div>
 
-            {/* Links Tab - Shows links where show_in_links is true */}
-            <TabsContent value="links" className="animate-fade-in">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
+            >
+              <h1 
+                className={`text-3xl md:text-5xl font-bold mb-3 ${getTextColor()}`}
+                style={{ 
+                  textShadow: profileTheme === "dark" || profileTheme === "gradient" 
+                    ? "0 2px 20px rgba(0,0,0,0.5)" 
+                    : "0 2px 10px rgba(255,255,255,0.3)"
+                }}
+              >
+                {profile.display_name || profile.username}
+              </h1>
+              <p className={`text-lg ${getTextColor()} opacity-70 mb-4`}>@{profile.username}</p>
+
+              {profile.bio && (
+                <p className={`text-base md:text-lg ${getTextColor()} opacity-90 max-w-2xl mx-auto mb-8 leading-relaxed`}>
+                  {profile.bio}
+                </p>
+              )}
+
+              {/* QR Code Button with Pulse Effect */}
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button
+                  size="lg"
+                  onClick={() => setShowQR(true)}
+                  className="gap-2 rounded-2xl px-6 py-6 font-semibold text-base relative overflow-hidden group"
+                  style={{ 
+                    background: `linear-gradient(135deg, ${themeColor}, ${themeColor}dd)`,
+                    color: "white",
+                    border: "2px solid rgba(255,255,255,0.2)",
+                    boxShadow: `0 8px 32px ${themeColor}40`
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                  <QrCode className="w-5 h-5 relative z-10" />
+                  <span className="relative z-10">Show QR Code</span>
+                </Button>
+              </motion.div>
+            </motion.div>
+          </div>
+        </motion.div>
+
+        {/* Modern Pill-Style Tabs with Icons */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.5 }}
+          className="mb-12"
+        >
+          <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-2 shadow-xl border border-white/20 max-w-md mx-auto">
+            <div className="grid grid-cols-3 gap-2 relative">
+              {/* Animated Background Slider */}
+              <motion.div
+                layoutId="activeTab"
+                className="absolute inset-y-0 rounded-2xl"
+                style={{
+                  background: `linear-gradient(135deg, ${themeColor}, ${themeColor}cc)`,
+                  boxShadow: `0 4px 20px ${themeColor}50`,
+                  width: "calc(33.333% - 4px)",
+                  left: activeTab === "links" ? "4px" : activeTab === "shop" ? "calc(33.333% + 2px)" : "calc(66.666%)",
+                }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              />
+              
+              {/* Tab Buttons */}
+              <button
+                onClick={() => setActiveTab("links")}
+                className={`relative z-10 py-4 px-4 rounded-2xl font-semibold text-sm transition-colors duration-300 flex items-center justify-center gap-2 ${
+                  activeTab === "links" ? "text-white" : `${getTextColor()} opacity-60`
+                }`}
+              >
+                <Link2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Links</span>
+              </button>
+              
+              <button
+                onClick={() => setActiveTab("shop")}
+                className={`relative z-10 py-4 px-4 rounded-2xl font-semibold text-sm transition-colors duration-300 flex items-center justify-center gap-2 ${
+                  activeTab === "shop" ? "text-white" : `${getTextColor()} opacity-60`
+                }`}
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span className="hidden sm:inline">Shop</span>
+              </button>
+              
+              <button
+                onClick={() => setActiveTab("gallery")}
+                className={`relative z-10 py-4 px-4 rounded-2xl font-semibold text-sm transition-colors duration-300 flex items-center justify-center gap-2 ${
+                  activeTab === "gallery" ? "text-white" : `${getTextColor()} opacity-60`
+                }`}
+              >
+                <ImageIcon className="w-4 h-4" />
+                <span className="hidden sm:inline">Gallery</span>
+              </button>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Tab Content with Slide Animations */}
+        <AnimatePresence mode="wait">
+          {activeTab === "links" && (
+            <motion.div
+              key="links"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.3 }}
+            >
               {linksTabItems.length > 0 ? (
                 <div className="space-y-8">
                   {linksTabItems.filter(link => !link.is_shopping_link).length > 0 && (
-                    <div>
-                      <h3 className={`text-xl font-semibold mb-4 ${getTextColor()}`}>My Links</h3>
-                      {renderLinkSection(linksTabItems.filter(link => !link.is_shopping_link), "Links")}
-                    </div>
+                    renderLinkSection(linksTabItems.filter(link => !link.is_shopping_link), "Links")
                   )}
                   {linksTabItems.filter(link => link.is_shopping_link).length > 0 && (
                     <div>
-                      <h3 className={`text-xl font-semibold mb-4 ${getTextColor()}`}>Featured Products</h3>
+                      <h3 className={`text-2xl font-bold mb-6 ${getTextColor()}`}>Featured Products</h3>
                       {renderLinkSection(linksTabItems.filter(link => link.is_shopping_link), "Shop")}
                     </div>
                   )}
                 </div>
               ) : (
-                <Card className={`${getCardStyle()} animate-fade-in`}>
-                  <CardContent className="p-8 text-center">
-                    <p className={`${getTextColor()} opacity-60`}>No links added yet.</p>
-                  </CardContent>
-                </Card>
+                <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-12 text-center border border-white/20">
+                  <p className={`${getTextColor()} opacity-60 text-lg`}>No links added yet.</p>
+                </div>
               )}
-            </TabsContent>
+            </motion.div>
+          )}
 
-            {/* Shop Tab - Shows only shopping links */}
-            <TabsContent value="shop" className="animate-fade-in">
+          {activeTab === "shop" && (
+            <motion.div
+              key="shop"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.3 }}
+            >
               {shopTabItems.length > 0 ? (
                 renderLinkSection(shopTabItems, "Shop")
               ) : (
                 renderShopEmptyState()
               )}
-            </TabsContent>
-          </Tabs>
-        </div>
+            </motion.div>
+          )}
 
-        {/* Media Gallery */}
-        {renderMedia()}
+          {activeTab === "gallery" && (
+            <motion.div
+              key="gallery"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.3 }}
+            >
+              {media.length > 0 ? (
+                renderMedia()
+              ) : (
+                <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-12 text-center border border-white/20">
+                  <p className={`${getTextColor()} opacity-60 text-lg`}>No media added yet.</p>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Footer */}
-        <div className="text-center mt-12 pt-8 border-t border-white/20">
-          <div className={`flex items-center justify-center gap-2 ${getTextColor()} opacity-60`}>
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1, duration: 0.5 }}
+          className="text-center mt-16 pt-8 border-t border-white/10"
+        >
+          <div className={`flex items-center justify-center gap-2 ${getTextColor()} opacity-50 hover:opacity-80 transition-opacity`}>
             <Zap className="w-4 h-4" />
-            <span className="text-sm">Powered by Prism Link Spot</span>
+            <span className="text-sm font-medium">Powered by Prism Link Spot</span>
           </div>
-        </div>
+        </motion.div>
       </div>
 
-      {/* QR Code Dialog */}
+      {/* QR Code Dialog with Enhanced Design */}
       <Dialog open={showQR} onOpenChange={setShowQR}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>QR Code for {profile.display_name || profile.username}</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col items-center space-y-4">
-            <div className="bg-white p-4 rounded-lg">
-              <QRCodeSVG
-                value={profileUrl}
-                size={200}
-                level="H"
-                includeMargin={true}
-                fgColor={themeColor}
-              />
+        <DialogContent className="max-w-md backdrop-blur-2xl bg-white/95 dark:bg-black/95 border-2 rounded-3xl p-0 overflow-hidden" style={{ borderColor: `${themeColor}40` }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <DialogHeader className="p-6 pb-4">
+              <DialogTitle className="text-2xl font-bold text-center" style={{ color: themeColor }}>
+                QR Code
+              </DialogTitle>
+              <p className="text-center text-muted-foreground mt-1">
+                {profile.display_name || profile.username}
+              </p>
+            </DialogHeader>
+            <div className="flex flex-col items-center p-6 pt-2 space-y-6">
+              <motion.div 
+                className="relative p-6 rounded-3xl border-4 shadow-2xl"
+                style={{ 
+                  borderColor: `${themeColor}40`,
+                  background: "white",
+                  boxShadow: `0 20px 60px ${themeColor}30`
+                }}
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                <div 
+                  className="absolute inset-0 rounded-3xl blur-2xl opacity-30"
+                  style={{ background: themeColor }}
+                />
+                <QRCodeSVG
+                  value={profileUrl}
+                  size={220}
+                  level="H"
+                  includeMargin={true}
+                  fgColor={themeColor}
+                  className="relative z-10"
+                />
+              </motion.div>
+              <div className="text-center space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  Scan to visit profile
+                </p>
+                <p className="text-xs text-muted-foreground max-w-xs">
+                  Share your profile instantly by letting others scan this QR code
+                </p>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground text-center">
-              Scan this QR code to visit this profile
-            </p>
-          </div>
+          </motion.div>
         </DialogContent>
       </Dialog>
 
-      {/* Lightbox Dialog with Framer Motion */}
+      {/* Lightbox Dialog with Enhanced Framer Motion */}
       <AnimatePresence>
         {lightboxUrl && (
           <Dialog open={true} onOpenChange={() => setLightboxUrl(null)}>
-            <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95 border-none">
+            <DialogContent className="max-w-6xl p-0 overflow-hidden bg-black/98 border-none backdrop-blur-2xl">
               <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
+                initial={{ opacity: 0, scale: 0.85, rotateY: -10 }}
+                animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                exit={{ opacity: 0, scale: 0.85, rotateY: 10 }}
+                transition={{ 
+                  duration: 0.5, 
+                  ease: [0.23, 1, 0.32, 1]
+                }}
                 className="relative"
               >
-                <DialogHeader className="p-4 pb-2">
-                  <DialogTitle className="text-white">
+                <DialogHeader className="p-6 pb-3 bg-gradient-to-b from-black/60 to-transparent">
+                  <DialogTitle className="text-white text-2xl font-bold">
                     {media.find(m => signedMediaUrls[m.id] === lightboxUrl || m.url === lightboxUrl)?.title}
                   </DialogTitle>
                 </DialogHeader>
-                <div className="relative p-4">
+                <div className="relative p-6">
                   {lightboxType === "image" ? (
-                    <motion.img
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                      src={lightboxUrl}
-                      alt="Preview"
-                      className="w-full h-auto max-h-[75vh] object-contain rounded-lg"
-                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: 0.1 }}
+                      className="relative rounded-2xl overflow-hidden"
+                    >
+                      <img
+                        src={lightboxUrl}
+                        alt="Preview"
+                        className="w-full h-auto max-h-[80vh] object-contain rounded-2xl"
+                      />
+                    </motion.div>
                   ) : (
-                    <motion.video
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                      src={lightboxUrl}
-                      controls
-                      controlsList="nodownload"
-                      className="w-full h-auto max-h-[75vh] rounded-lg"
-                      autoPlay
-                      playsInline
-                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: 0.1 }}
+                      className="relative rounded-2xl overflow-hidden"
+                    >
+                      <video
+                        src={lightboxUrl}
+                        controls
+                        controlsList="nodownload"
+                        className="w-full h-auto max-h-[80vh] rounded-2xl"
+                        autoPlay
+                        playsInline
+                      />
+                    </motion.div>
                   )}
                   {media.find(m => signedMediaUrls[m.id] === lightboxUrl || m.url === lightboxUrl)?.description && (
                     <motion.p 
-                      initial={{ opacity: 0, y: 10 }}
+                      initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="mt-4 text-sm text-gray-300"
+                      transition={{ delay: 0.3, duration: 0.4 }}
+                      className="mt-6 text-base text-gray-300 leading-relaxed px-2"
                     >
                       {media.find(m => signedMediaUrls[m.id] === lightboxUrl || m.url === lightboxUrl)?.description}
                     </motion.p>
