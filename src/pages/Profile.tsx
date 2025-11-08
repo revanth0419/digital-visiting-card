@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ExternalLink, Zap, Video, QrCode, ChevronDown, Link2, ShoppingBag, Image as ImageIcon } from "lucide-react";
+import { ExternalLink, Zap, Video, QrCode, ChevronDown, Link2, ShoppingBag, Image as ImageIcon, UserPlus, UserCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,7 @@ type Profile = {
   profile_theme: string | null;
   background_url: string | null;
   background_type: string | null;
+  user_id?: string;
 };
 
 type Link = {
@@ -65,6 +66,8 @@ const Profile = () => {
   const [signedBackgroundUrl, setSignedBackgroundUrl] = useState<string | null>(null);
   const [signedMediaUrls, setSignedMediaUrls] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<string>("links");
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -73,12 +76,16 @@ const Profile = () => {
         return;
       }
 
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id || null);
+
       // Removed rate limiting for better user experience during development
 
       // Security: Only select safe columns, exclude user_id to prevent UUID exposure
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("id, username, display_name, bio, avatar_url, theme_color, layout_style, profile_theme, background_url, background_type, created_at, updated_at")
+        .select("id, username, display_name, bio, avatar_url, theme_color, layout_style, profile_theme, background_url, background_type, created_at, updated_at, user_id")
         .eq("username", username)
         .single();
 
@@ -88,6 +95,18 @@ const Profile = () => {
       }
 
       setProfile(profileData);
+
+      // Check subscription status if user is logged in
+      if (user && profileData.user_id !== user.id) {
+        const { data: subscription } = await supabase
+          .from("subscriptions")
+          .select("id")
+          .eq("subscriber_id", user.id)
+          .eq("subscribed_to_id", profileData.user_id)
+          .maybeSingle();
+        
+        setIsSubscribed(!!subscription);
+      }
 
       // Generate signed URLs for avatar and background with longer expiry
       if (profileData.avatar_url) {
@@ -870,6 +889,80 @@ const Profile = () => {
                 <p className={`text-base md:text-lg ${getTextColor()} opacity-90 max-w-2xl mx-auto mb-8 leading-relaxed`}>
                   {profile.bio}
                 </p>
+              )}
+
+              {/* Subscribe Button (only show if viewing someone else's profile and logged in) */}
+              {currentUserId && profile.user_id && currentUserId !== profile.user_id && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5, duration: 0.5 }}
+                  className="mb-4"
+                >
+                  <Button
+                    size="lg"
+                    variant={isSubscribed ? "secondary" : "default"}
+                    onClick={async () => {
+                      try {
+                        if (isSubscribed) {
+                          const { error } = await supabase
+                            .from("subscriptions")
+                            .delete()
+                            .eq("subscriber_id", currentUserId)
+                            .eq("subscribed_to_id", profile.user_id);
+                          
+                          if (error) throw error;
+                          setIsSubscribed(false);
+                          toast({
+                            title: "Unsubscribed",
+                            description: `You will no longer receive updates from ${profile.display_name || profile.username}`,
+                          });
+                        } else {
+                          const { error } = await supabase
+                            .from("subscriptions")
+                            .insert({
+                              subscriber_id: currentUserId,
+                              subscribed_to_id: profile.user_id
+                            });
+                          
+                          if (error) throw error;
+                          setIsSubscribed(true);
+                          toast({
+                            title: "Subscribed!",
+                            description: `You'll be notified when ${profile.display_name || profile.username} adds new content`,
+                          });
+                        }
+                      } catch (error) {
+                        console.error("Error toggling subscription:", error);
+                        toast({
+                          title: "Error",
+                          description: "Failed to update subscription",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    className="rounded-2xl px-8 h-12 font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
+                    style={{
+                      background: isSubscribed 
+                        ? "rgba(255, 255, 255, 0.1)"
+                        : `linear-gradient(135deg, ${themeColor}, ${themeColor}dd)`,
+                      color: isSubscribed ? themeColor : "white",
+                      border: isSubscribed ? `2px solid ${themeColor}` : "none"
+                    }}
+                  >
+                    {isSubscribed ? (
+                      <>
+                        <UserCheck className="w-5 h-5 mr-2" />
+                        Subscribed
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-5 h-5 mr-2" />
+                        Subscribe
+                      </>
+                    )}
+                  </Button>
+                </motion.div>
               )}
 
               {/* QR Code Button with Pulse Effect */}

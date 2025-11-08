@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Zap, Eye } from "lucide-react";
+import { LogOut, Zap, Eye, Search as SearchIcon } from "lucide-react";
+import NotificationsDropdown from "@/components/dashboard/NotificationsDropdown";
 import ProfileEditor from "@/components/dashboard/ProfileEditor";
 import LinksManager from "@/components/dashboard/LinksManager";
 import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
@@ -94,6 +95,10 @@ const Dashboard = () => {
             <h1 className="text-2xl font-bold text-gradient">Prism Link Spot</h1>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/search")}>
+              <SearchIcon className="w-5 h-5" />
+            </Button>
+            <NotificationsDropdown />
             <ThemeToggle />
             <Button variant="outline" size="sm" onClick={handleViewProfile}>
               <Eye className="w-4 h-4 mr-2" />

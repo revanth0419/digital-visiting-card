@@ -106,6 +106,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          link: string | null
+          message: string
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          link?: string | null
+          message: string
+          read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          link?: string | null
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -151,6 +184,27 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           username?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string | null
+          id: string
+          subscribed_to_id: string
+          subscriber_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          subscribed_to_id: string
+          subscriber_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          subscribed_to_id?: string
+          subscriber_id?: string
         }
         Relationships: []
       }
