@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"; // TODO: Supabase Storage still in use
 import { getSignedUrl, extractStoragePath } from "@/lib/storage";
 import { uploadRateLimiter } from "@/lib/rate-limit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { apiFetch, buildQuery } from "@/lib/api";
 
 type MediaManagerProps = {
   userId: string;
@@ -52,21 +53,17 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
   const fetchProfileAndMedia = async () => {
     try {
       // Get profile ID
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", userId)
-        .single();
+      const { data: profile, error: profileError } = await apiFetch<{ id: string }>(
+        `/profiles/by-user/${userId}`
+      );
 
       if (profileError) throw profileError;
       setProfileId(profile.id);
 
       // Get media
-      const { data, error } = await supabase
-        .from("media")
-        .select("*")
-        .eq("profile_id", profile.id)
-        .order("order_index", { ascending: true });
+      const { data, error } = await apiFetch<Media[]>(
+        `/media${buildQuery({ profileId: profile.id })}`
+      );
 
       if (error) throw error;
       setMedia((data as Media[]) || []);
@@ -183,22 +180,36 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       clearInterval(progressInterval);
       setUploadProgress(95);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        // Provide more helpful error messages for bucket issues
+        if (uploadError.message?.includes('Bucket not found') || 
+            uploadError.message?.includes('bucket') ||
+            uploadError.message?.toLowerCase().includes('does not exist')) {
+          throw new Error(
+            'Storage bucket "media" not found. ' +
+            'Please create the bucket in your Supabase dashboard (Storage > New bucket) ' +
+            'or run the Supabase migration that creates storage buckets. ' +
+            'The bucket should be named "media" and set to private.'
+          );
+        }
+        throw uploadError;
+      }
 
       // Store the file path (not public URL) for signed URL generation
       const storagePath = filePath;
 
       // Add to database
-      const { error: insertError } = await supabase
-        .from('media')
-        .insert({
+      const { error: insertError } = await apiFetch("/media", {
+        method: "POST",
+        body: JSON.stringify({
           profile_id: profileId,
           type: isImage ? 'image' : 'video',
           url: storagePath,
           title: title.trim(),
           description: description.trim() || null,
           order_index: media.length,
-        });
+        }),
+      });
 
       if (insertError) throw insertError;
 
@@ -251,10 +262,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       await supabase.storage.from('media').remove([path]);
 
       // Delete from database
-      const { error } = await supabase
-        .from('media')
-        .delete()
-        .eq('id', mediaItem.id);
+      const { error } = await apiFetch(`/media/${mediaItem.id}`, { method: "DELETE" });
 
       if (error) throw error;
 

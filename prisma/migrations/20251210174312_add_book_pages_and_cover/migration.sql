@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Book" ADD COLUMN     "coverImageUrl" TEXT,
+ADD COLUMN     "pages" JSONB,
+ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"; // TODO: Supabase Auth/Storage still in use
 import { getSignedUrl, extractStoragePath } from "@/lib/storage";
 import { profileViewRateLimiter } from "@/lib/rate-limit";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +17,7 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { apiFetch, buildQuery } from "@/lib/api";
 
 type Profile = {
   id: string;
@@ -68,6 +69,7 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState<string>("links");
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [books, setBooks] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -76,18 +78,12 @@ const Profile = () => {
         return;
       }
 
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUserId(user?.id || null);
 
-      // Removed rate limiting for better user experience during development
-
-      // Security: Only select safe columns, exclude user_id to prevent UUID exposure
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, username, display_name, bio, avatar_url, theme_color, layout_style, profile_theme, background_url, background_type, created_at, updated_at, user_id")
-        .eq("username", username)
-        .single();
+      const { data: profileData, error: profileError } = await apiFetch<Profile>(
+        `/profiles/username/${username}`
+      );
 
       if (profileError || !profileData) {
         setLoading(false);
@@ -96,17 +92,15 @@ const Profile = () => {
 
       setProfile(profileData);
 
-      // Check subscription status if user is logged in
-      if (user && profileData.user_id !== user.id) {
-        const { data: subscription } = await supabase
-          .from("subscriptions")
-          .select("id")
-          .eq("subscriber_id", user.id)
-          .eq("subscribed_to_id", profileData.user_id)
-          .maybeSingle();
-        
+      if (user && profileData.user_id && profileData.user_id !== user.id) {
+        const { data: subscription } = await apiFetch(
+          `/subscriptions${buildQuery({ subscriberId: user.id, subscribedToId: profileData.user_id })}`
+        );
         setIsSubscribed(!!subscription);
       }
+
+      const { data: booksData } = await apiFetch<any[]>(`/books/public/${username}`);
+      if (booksData) setBooks(booksData);
 
       // Generate signed URLs for avatar and background with longer expiry
       if (profileData.avatar_url) {
@@ -125,22 +119,17 @@ const Profile = () => {
         setSignedBackgroundUrl(null);
       }
 
-      const { data: linksData } = await supabase
-        .from("links")
-        .select("*")
-        .eq("profile_id", profileData.id)
-        .eq("is_active", true)
-        .order("order_index");
+      const { data: linksData } = await apiFetch<Link[]>(
+        `/links${buildQuery({ profileId: profileData.id, active: true })}`
+      );
 
       if (linksData) {
         setLinks(linksData);
       }
 
-      const { data: mediaData } = await supabase
-        .from("media")
-        .select("*")
-        .eq("profile_id", profileData.id)
-        .order("order_index");
+      const { data: mediaData } = await apiFetch<Media[]>(
+        `/media${buildQuery({ profileId: profileData.id })}`
+      );
 
       if (mediaData) {
         setMedia(mediaData as Media[]);
@@ -161,121 +150,7 @@ const Profile = () => {
     };
 
     fetchProfile();
-
-    // Setup realtime subscriptions for live updates
-    if (!username) return;
-
-    const channel = supabase
-      .channel('profile-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
-          filter: `username=eq.${username}`,
-        },
-        async (payload) => {
-          if (payload.eventType === 'UPDATE') {
-            const updatedProfile = payload.new as Profile;
-            const oldProfile = payload.old as Profile;
-            setProfile(updatedProfile);
-            
-            // Only regenerate signed URLs if the URLs actually changed
-            if (updatedProfile.avatar_url !== oldProfile.avatar_url) {
-              if (updatedProfile.avatar_url) {
-                const path = extractStoragePath(updatedProfile.avatar_url) || updatedProfile.avatar_url;
-                const signedUrl = await getSignedUrl('avatars', path, 7200); // 2 hours
-                if (signedUrl) setSignedAvatarUrl(signedUrl);
-              } else {
-                setSignedAvatarUrl(null);
-              }
-            }
-
-            if (updatedProfile.background_url !== oldProfile.background_url || 
-                updatedProfile.background_type !== oldProfile.background_type) {
-              if (updatedProfile.background_url && updatedProfile.background_type === 'image') {
-                const path = extractStoragePath(updatedProfile.background_url) || updatedProfile.background_url;
-                const signedUrl = await getSignedUrl('media', path, 7200); // 2 hours
-                if (signedUrl) setSignedBackgroundUrl(signedUrl);
-              } else {
-                setSignedBackgroundUrl(null);
-              }
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    // Subscribe to links changes
-    const linksChannel = supabase
-      .channel('links-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'links',
-        },
-        async (payload) => {
-          if (profile) {
-            const { data: linksData } = await supabase
-              .from("links")
-              .select("*")
-              .eq("profile_id", profile.id)
-              .eq("is_active", true)
-              .order("order_index");
-
-            if (linksData) {
-              setLinks(linksData);
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    // Subscribe to media changes
-    const mediaChannel = supabase
-      .channel('media-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'media',
-        },
-        async (payload) => {
-          if (profile) {
-            const { data: mediaData } = await supabase
-              .from("media")
-              .select("*")
-              .eq("profile_id", profile.id)
-              .order("order_index");
-
-            if (mediaData) {
-              setMedia(mediaData as Media[]);
-              
-              // Generate signed URLs for all media
-              const urls: Record<string, string> = {};
-              for (const item of mediaData) {
-                const path = extractStoragePath(item.url) || item.url;
-                const signedUrl = await getSignedUrl('media', path);
-                if (signedUrl) {
-                  urls[item.id] = signedUrl;
-                }
-              }
-              setSignedMediaUrls(urls);
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-      supabase.removeChannel(linksChannel);
-      supabase.removeChannel(mediaChannel);
-    };
+    // TODO: Realtime updates removed; consider replacing with WebSockets or polling.
   }, [username]);
 
   const openLightbox = (url: string, type: "image" | "video") => {
@@ -905,12 +780,11 @@ const Profile = () => {
                     onClick={async () => {
                       try {
                         if (isSubscribed) {
-                          const { error } = await supabase
-                            .from("subscriptions")
-                            .delete()
-                            .eq("subscriber_id", currentUserId)
-                            .eq("subscribed_to_id", profile.user_id);
-                          
+                          const { error } = await apiFetch(
+                            `/subscriptions${buildQuery({ subscriberId: currentUserId, subscribedToId: profile.user_id })}`,
+                            { method: "DELETE" }
+                          );
+
                           if (error) throw error;
                           setIsSubscribed(false);
                           toast({
@@ -918,13 +792,14 @@ const Profile = () => {
                             description: `You will no longer receive updates from ${profile.display_name || profile.username}`,
                           });
                         } else {
-                          const { error } = await supabase
-                            .from("subscriptions")
-                            .insert({
+                          const { error } = await apiFetch("/subscriptions", {
+                            method: "POST",
+                            body: JSON.stringify({
                               subscriber_id: currentUserId,
                               subscribed_to_id: profile.user_id
-                            });
-                          
+                            })
+                          });
+
                           if (error) throw error;
                           setIsSubscribed(true);
                           toast({
@@ -998,7 +873,7 @@ const Profile = () => {
           className="mb-12"
         >
           <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-2 shadow-xl border border-white/20 max-w-md mx-auto">
-            <div className="grid grid-cols-3 gap-2 relative">
+            <div className="grid grid-cols-4 gap-2 relative">
               {/* Animated Background Slider */}
               <motion.div
                 layoutId="activeTab"
@@ -1006,8 +881,15 @@ const Profile = () => {
                 style={{
                   background: `linear-gradient(135deg, ${themeColor}, ${themeColor}cc)`,
                   boxShadow: `0 4px 20px ${themeColor}50`,
-                  width: "calc(33.333% - 4px)",
-                  left: activeTab === "links" ? "4px" : activeTab === "shop" ? "calc(33.333% + 2px)" : "calc(66.666%)",
+                  width: "calc(25% - 4px)",
+                  left:
+                    activeTab === "links"
+                      ? "4px"
+                      : activeTab === "shop"
+                        ? "calc(25% + 2px)"
+                        : activeTab === "gallery"
+                          ? "calc(50% + 0px)"
+                          : "calc(75% - 2px)",
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               />
@@ -1041,6 +923,15 @@ const Profile = () => {
               >
                 <ImageIcon className="w-4 h-4" />
                 <span className="hidden sm:inline">Gallery</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("books")}
+                className={`relative z-10 py-4 px-4 rounded-2xl font-semibold text-sm transition-colors duration-300 flex items-center justify-center gap-2 ${
+                  activeTab === "books" ? "text-white" : `${getTextColor()} opacity-60`
+                }`}
+              >
+                <BookOpen className="w-4 h-4" />
+                <span className="hidden sm:inline">Books</span>
               </button>
             </div>
           </div>
@@ -1109,6 +1000,42 @@ const Profile = () => {
               )}
             </motion.div>
           )}
+
+        {activeTab === "books" && (
+          <motion.div
+            key="books"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4"
+          >
+            <h3 className={`text-2xl font-bold ${getTextColor()}`}>Books</h3>
+            {books.length === 0 ? (
+              <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-12 text-center border border-white/20">
+                <p className={`${getTextColor()} opacity-60 text-lg`}>No books yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {books.map((book) => (
+                  <div key={book.id} className="p-4 border rounded-2xl bg-white/10 dark:bg-black/20 backdrop-blur">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className={`font-semibold text-lg ${getTextColor()}`}>{book.title}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {book.description || "No description"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 max-h-48 overflow-auto text-sm leading-6 whitespace-pre-wrap text-foreground/80">
+                      {book.content}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
         </AnimatePresence>
 
         {/* Footer */}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"; // TODO: Supabase Auth still in use
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Search as SearchIcon, UserPlus, UserCheck, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { apiFetch, buildQuery } from "@/lib/api";
 
 interface Profile {
   id: string;
@@ -45,20 +46,15 @@ export default function Search() {
   const searchProfiles = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
-        .limit(20);
-
+      const { data, error } = await apiFetch<Profile[]>(
+        `/profiles/search${buildQuery({ q: searchQuery, limit: 20 })}`
+      );
       if (error) throw error;
 
       if (data && currentUserId) {
-        // Check subscription status for each profile
-        const { data: subscriptions } = await supabase
-          .from("subscriptions")
-          .select("subscribed_to_id")
-          .eq("subscriber_id", currentUserId);
+        const { data: subscriptions } = await apiFetch<{ subscribed_to_id: string }[]>(
+          `/subscriptions${buildQuery({ subscriberId: currentUserId })}`
+        );
 
         const subscribedIds = new Set(subscriptions?.map(s => s.subscribed_to_id) || []);
         
@@ -70,6 +66,8 @@ export default function Search() {
           }));
 
         setProfiles(profilesWithStatus);
+      } else if (data) {
+        setProfiles(data);
       }
     } catch (error) {
       console.error("Error searching profiles:", error);
@@ -88,22 +86,22 @@ export default function Search() {
     try {
       if (profile.isSubscribed) {
         // Unsubscribe
-        const { error } = await supabase
-          .from("subscriptions")
-          .delete()
-          .eq("subscriber_id", currentUserId)
-          .eq("subscribed_to_id", profile.user_id);
+        const { error } = await apiFetch(
+          `/subscriptions${buildQuery({ subscriberId: currentUserId, subscribedToId: profile.user_id })}`,
+          { method: "DELETE" }
+        );
 
         if (error) throw error;
         toast.success(`Unsubscribed from ${profile.display_name || profile.username}`);
       } else {
         // Subscribe
-        const { error } = await supabase
-          .from("subscriptions")
-          .insert({
+        const { error } = await apiFetch("/subscriptions", {
+          method: "POST",
+          body: JSON.stringify({
             subscriber_id: currentUserId,
             subscribed_to_id: profile.user_id
-          });
+          })
+        });
 
         if (error) throw error;
         toast.success(`Subscribed to ${profile.display_name || profile.username}`);

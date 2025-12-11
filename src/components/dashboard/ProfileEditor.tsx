@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { getSignedUrl, extractStoragePath } from "@/lib/storage";
+import { supabase } from "@/integrations/supabase/client"; // TODO: Supabase Auth/Storage still in use
 import { uploadRateLimiter } from "@/lib/rate-limit";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload, Save, LayoutList, LayoutGrid, Rows3, Palette, Image } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { apiFetch } from "@/lib/api";
 
 type ProfileEditorProps = {
   userId: string;
@@ -40,16 +40,12 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
   }, [userId]);
 
   const fetchProfile = async () => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
+    const { data, error } = await apiFetch<any>(`/profiles/by-user/${userId}`);
 
     if (error) {
       toast({
         title: "Error",
-        description: "Failed to load profile.",
+        description: error?.message || error || "Failed to load profile.",
         variant: "destructive",
       });
     } else if (data) {
@@ -128,12 +124,12 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
       // Store the file path (not public URL) for signed URL generation
       const storagePath = filePath;
 
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: storagePath })
-        .eq('user_id', userId);
+      const { error: updateError } = await apiFetch(`/profiles/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify({ avatar_url: storagePath }),
+      });
 
-      if (updateError) throw updateError;
+      if (updateError) throw updateError as any;
 
       setAvatarUrl(storagePath);
       toast({
@@ -233,9 +229,9 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
   const handleSave = async () => {
     setSaving(true);
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({
+    const { error } = await apiFetch(`/profiles/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify({
         display_name: displayName,
         bio,
         theme_color: themeColor,
@@ -243,13 +239,13 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
         profile_theme: profileTheme,
         background_url: backgroundUrl,
         background_type: backgroundType,
-      })
-      .eq("user_id", userId);
+      }),
+    });
 
     if (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error?.message || error || "Failed to save profile",
         variant: "destructive",
       });
     } else {

@@ -8,8 +8,10 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
+import Earn from "./pages/Earn";
 import Profile from "./pages/Profile";
 import Search from "./pages/Search";
+import PublicBook from "./pages/PublicBook";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +53,16 @@ const AnimatedRoutes = () => {
             <Dashboard />
           </motion.div>
         } />
+        <Route path="/dashboard/earn" element={
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Earn />
+          </motion.div>
+        } />
         <Route path="/u/:username" element={
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -69,6 +81,16 @@ const AnimatedRoutes = () => {
             transition={{ duration: 0.3 }}
           >
             <Search />
+          </motion.div>
+        } />
+        <Route path="/books/:id" element={
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+          >
+            <PublicBook />
           </motion.div>
         } />
         <Route path="*" element={<NotFound />} />

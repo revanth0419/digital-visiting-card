@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"; // TODO: Supabase Functions/auth still in use for metadata/auth
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { Plus, Trash2, GripVertical, Loader2 } from "lucide-react";
+import { apiFetch, buildQuery } from "@/lib/api";
 import {
   DndContext,
   closestCenter,
@@ -123,36 +124,50 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   }, [userId]);
 
   const fetchLinks = async () => {
-    // Get profile ID first
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", userId)
-      .single();
+    try {
+      setLoading(true);
+      const { data: profileData, error: profileError } = await apiFetch<{ id: string }>(
+        `/profiles/by-user/${userId}`
+      );
 
-    if (!profileData) {
-      setLoading(false);
-      return;
-    }
+      if (!profileData || profileError) {
+        console.error("Failed to fetch profile:", profileError);
+        toast({
+          title: "Error",
+          description: profileError || "Failed to load profile. Please refresh the page.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
 
-    setProfileId(profileData.id);
+      setProfileId(profileData.id);
 
-    const { data, error } = await supabase
-      .from("links")
-      .select("*")
-      .eq("profile_id", profileData.id)
-      .order("order_index");
+      const { data, error } = await apiFetch<Link[]>(
+        `/links${buildQuery({ profileId: profileData.id })}`
+      );
 
-    if (error) {
+      if (error) {
+        console.error("Failed to fetch links:", error);
+        toast({
+          title: "Error",
+          description: error || "Failed to load links.",
+          variant: "destructive",
+        });
+        setLinks([]);
+      } else {
+        setLinks(data || []);
+      }
+    } catch (err) {
+      console.error("Unexpected error fetching links:", err);
       toast({
         title: "Error",
-        description: "Failed to load links.",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-    } else {
-      setLinks(data || []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const normalizeUrl = (url: string): string => {
@@ -261,16 +276,19 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
 
     setAdding(true);
 
-    const { error } = await supabase.from("links").insert({
-      profile_id: profileId,
-      title: newTitle,
-      url: normalizedUrl,
-      icon: newIcon || null,
-      image_url: manualImageUrl || previewImage,
-      price: previewPrice,
-      order_index: links.length,
-      is_shopping_link: isShoppingLink,
-      show_in_links: showInLinks,
+    const { error } = await apiFetch("/links", {
+      method: "POST",
+      body: JSON.stringify({
+        profile_id: profileId,
+        title: newTitle,
+        url: normalizedUrl,
+        icon: newIcon || null,
+        image_url: manualImageUrl || previewImage,
+        price: previewPrice,
+        order_index: links.length,
+        is_shopping_link: isShoppingLink,
+        show_in_links: showInLinks,
+      }),
     });
 
     if (error) {
@@ -299,7 +317,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   };
 
   const handleDeleteLink = async (id: string) => {
-    const { error } = await supabase.from("links").delete().eq("id", id);
+    const { error } = await apiFetch(`/links/${id}`, { method: "DELETE" });
 
     if (error) {
       toast({
@@ -335,12 +353,10 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
       order_index: index,
     }));
 
-    for (const update of updates) {
-      await supabase
-        .from("links")
-        .update({ order_index: update.order_index })
-        .eq("id", update.id);
-    }
+    await apiFetch("/links/order", {
+      method: "PUT",
+      body: JSON.stringify({ updates }),
+    });
   };
 
   if (loading) {

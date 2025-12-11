@@ -200,8 +200,9 @@ const AnimatedCharacter = ({ expression, cursorPosition, isTypingPassword = fals
           strokeLinecap="round"
           fill="none"
           variants={mouthVariants}
-          animate={expression}
+          animate={expression || "neutral"}
           transition={{ duration: 0.4 }}
+          d={mouthVariants[expression as keyof typeof mouthVariants]?.d ?? mouthVariants.neutral.d}
         />
 
         {/* Sparkles for happy expression */}

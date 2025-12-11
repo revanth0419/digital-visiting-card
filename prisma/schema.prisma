@@ -1,0 +1,90 @@
+// Prisma schema inferred from Supabase usage. Review TODOs before migrate.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id              String    @id @default(uuid())
+  user_id         String    @unique
+  username        String    @unique
+  display_name    String?
+  bio             String?
+  avatar_url      String?
+  theme_color     String?
+  layout_style    String?
+  profile_theme   String?
+  background_url  String?
+  background_type String?
+  created_at      DateTime? @default(now()) // TODO: verify column exists
+  updated_at      DateTime? @updatedAt      // TODO: verify column exists
+  is_active       Boolean   @default(true)  // TODO: confirm profiles table has this flag
+
+  links Link[]
+  media Media[]
+}
+
+model Link {
+  id              String   @id @default(uuid())
+  profile_id      String
+  title           String
+  url             String
+  icon            String?
+  order_index     Int      @default(0)
+  image_url       String?
+  is_shopping_link Boolean @default(false)
+  show_in_links   Boolean  @default(true)
+  price           String?
+  is_active       Boolean  @default(true)
+
+  profile Profile @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+}
+
+model Media {
+  id          String   @id @default(uuid())
+  profile_id  String
+  type        String   // expected: "image" | "video" TODO: convert to enum if desired
+  url         String
+  title       String
+  description String?
+  order_index Int      @default(0)
+
+  profile Profile @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id               String   @id @default(uuid())
+  subscriber_id    String
+  subscribed_to_id String
+  created_at       DateTime @default(now())
+
+  @@unique([subscriber_id, subscribed_to_id])
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  user_id    String
+  type       String
+  title      String
+  message    String
+  link       String?
+  read       Boolean  @default(false)
+  created_at DateTime @default(now())
+}
+
+model Book {
+  id            String    @id @default(uuid())
+  userId        String
+  title         String
+  description   String
+  content       String
+  pages         Json?
+  coverImageUrl String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+}
+

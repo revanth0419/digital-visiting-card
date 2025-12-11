@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"; // TODO: Supabase Storage still in use
 import { logger } from "@/lib/logger";
 
 /**

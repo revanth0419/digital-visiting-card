@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"; // TODO: Supabase Auth still in use
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
 import { Download, Loader2, QrCode, Share2, Copy } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 type QRCodeDisplayProps = {
   userId: string;
@@ -21,11 +22,9 @@ const QRCodeDisplay = ({ userId }: QRCodeDisplayProps) => {
   }, [userId]);
 
   const fetchProfile = async () => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("user_id", userId)
-      .single();
+    const { data } = await apiFetch<{ username: string }>(
+      `/profiles/by-user/${userId}`
+    );
 
     if (data) {
       setUsername(data.username);

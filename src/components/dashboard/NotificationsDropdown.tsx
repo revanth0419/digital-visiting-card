@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"; // TODO: Supabase Auth still in use
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import {
 import { Bell, Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { apiFetch, buildQuery } from "@/lib/api";
 
 interface Notification {
   id: string;
@@ -30,7 +31,6 @@ export default function NotificationsDropdown() {
 
   useEffect(() => {
     fetchNotifications();
-    subscribeToNotifications();
   }, []);
 
   const fetchNotifications = async () => {
@@ -38,12 +38,9 @@ export default function NotificationsDropdown() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(10);
+      const { data, error } = await apiFetch<Notification[]>(
+        `/notifications${buildQuery({ userId: user.id })}`
+      );
 
       if (error) throw error;
 
@@ -56,38 +53,13 @@ export default function NotificationsDropdown() {
     }
   };
 
-  const subscribeToNotifications = () => {
-    const channel = supabase
-      .channel("notifications")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-        },
-        (payload) => {
-          const newNotification = payload.new as Notification;
-          setNotifications(prev => [newNotification, ...prev].slice(0, 10));
-          setUnreadCount(prev => prev + 1);
-          toast.info(newNotification.title, {
-            description: newNotification.message,
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
+  // TODO: Realtime notifications removed; consider WebSocket/polling if needed.
 
   const markAsRead = async (notificationId: string) => {
     try {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ read: true })
-        .eq("id", notificationId);
+      const { error } = await apiFetch(`/notifications/${notificationId}/read`, {
+        method: "PUT",
+      });
 
       if (error) throw error;
 
@@ -105,11 +77,10 @@ export default function NotificationsDropdown() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { error } = await supabase
-        .from("notifications")
-        .update({ read: true })
-        .eq("user_id", user.id)
-        .eq("read", false);
+      const { error } = await apiFetch(
+        `/notifications/read-all${buildQuery({ userId: user.id })}`,
+        { method: "PUT" }
+      );
 
       if (error) throw error;
 
@@ -124,10 +95,7 @@ export default function NotificationsDropdown() {
 
   const deleteNotification = async (notificationId: string) => {
     try {
-      const { error } = await supabase
-        .from("notifications")
-        .delete()
-        .eq("id", notificationId);
+      const { error } = await apiFetch(`/notifications/${notificationId}`, { method: "DELETE" });
 
       if (error) throw error;
 

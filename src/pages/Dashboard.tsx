@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"; 
 import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { LogOut, Zap, Eye, Search as SearchIcon } from "lucide-react";
+
 import NotificationsDropdown from "@/components/dashboard/NotificationsDropdown";
 import ProfileEditor from "@/components/dashboard/ProfileEditor";
 import LinksManager from "@/components/dashboard/LinksManager";
@@ -12,9 +13,12 @@ import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
 import MediaManager from "@/components/dashboard/MediaManager";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
+import { apiFetch } from "@/lib/api";
+
 const Dashboard = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -29,14 +33,14 @@ const Dashboard = () => {
     });
 
     // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (!session) {
-        navigate("/auth");
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+        if (!session) {
+          navigate("/auth");
+        }
       }
-    });
+    );
 
     return () => subscription.unsubscribe();
   }, [navigate]);
@@ -59,14 +63,19 @@ const Dashboard = () => {
   };
 
   const handleViewProfile = async () => {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("user_id", session?.user?.id)
-      .single();
+    if (!session?.user?.id) return;
 
-    if (profile) {
+    const { data: profile } = await apiFetch<{ username: string }>(
+      `/profiles/by-user/${session.user.id}`
+    );
+
+    if (profile?.username) {
       window.open(`/u/${profile.username}`, "_blank");
+    } else {
+      toast({
+        title: "Profile not found",
+        description: "Please complete your profile first.",
+      });
     }
   };
 
@@ -94,16 +103,24 @@ const Dashboard = () => {
             <Zap className="w-8 h-8 text-primary" />
             <h1 className="text-2xl font-bold text-gradient">Prism Link Spot</h1>
           </div>
+
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => navigate("/search")}>
               <SearchIcon className="w-5 h-5" />
             </Button>
+
             <NotificationsDropdown />
             <ThemeToggle />
+
+            <Button variant="outline" size="sm" onClick={() => navigate("/dashboard/earn")}>
+              Earn
+            </Button>
+
             <Button variant="outline" size="sm" onClick={handleViewProfile}>
               <Eye className="w-4 h-4 mr-2" />
               View Profile
             </Button>
+
             <Button variant="outline" size="sm" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
               Logout
