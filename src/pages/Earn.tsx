@@ -21,6 +21,7 @@ type Book = {
   content?: string;
   pages?: string[] | null;
   coverImageUrl?: string | null;
+  endImageUrl?: string | null;
   createdAt?: string;
 };
 
@@ -33,6 +34,7 @@ const Earn = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [fallbackCover, setFallbackCover] = useState<string | null>(null);
+  const [endImage, setEndImage] = useState<string | null>(null);
   const [books, setBooks] = useState<Book[]>([]);
   const [loadingBooks, setLoadingBooks] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -101,24 +103,18 @@ const Earn = () => {
         title: title || undefined,
         description: description || undefined,
         coverImageData: fallbackCover || undefined,
+        endImageData: endImage || undefined,
       },
     });
     setGenerating(false);
     if (error || !data) {
-      // Log full error details for debugging
-      console.error("[Earn] Book generation error:", {
-        error,
-        errorType: typeof error,
-        errorDetails: typeof error === "object" ? error : null
-      });
-      
-      // Show user-friendly message (don't expose sensitive details)
-      const errorMessage = typeof error === "string" 
-        ? error 
+      console.error("[Earn] Book generation error:", error);
+      const errorMessage = typeof error === "string"
+        ? error
         : (error?.details && typeof error.details === "string" && !error.details.includes("API key"))
           ? error.details
           : "Please try again";
-      
+
       toast({
         title: "Book generation failed",
         description: errorMessage,
@@ -136,16 +132,14 @@ const Earn = () => {
     if (!refreshError && refreshedBooks) {
       setBooks(refreshedBooks);
     } else {
-      // Fallback: add the new book to the list
-      const missingCover = !data.coverImageUrl;
-      const bookWithFallback = missingCover && fallbackCover ? { ...data, coverImageUrl: fallbackCover } : data;
-      if (missingCover && !fallbackCover) {
-        toast({
-          title: "AI cover unavailable",
-          description: "Upload your own image and regenerate to add a cover.",
-        });
-      }
-      setBooks((prev) => [bookWithFallback, ...prev]);
+      // Fallback: add the new book to the list locally if fetch failed
+      const bookWithImages = {
+        ...data,
+        coverImageUrl: data.coverImageUrl || fallbackCover,
+        endImageUrl: data.endImageUrl || endImage
+      };
+
+      setBooks((prev) => [bookWithImages, ...prev]);
     }
     setLoadingBooks(false);
   };
@@ -179,9 +173,8 @@ const Earn = () => {
                     setActivePanel((prev) => (prev === panel.id ? null : panel.id));
                   }
                 }}
-                className={`cursor-pointer border-slate-800 bg-slate-900/80 transition-all hover:border-blue-600 ${
-                  isActive ? "ring-2 ring-blue-500" : ""
-                }`}
+                className={`cursor-pointer border-slate-800 bg-slate-900/80 transition-all hover:border-blue-600 ${isActive ? "ring-2 ring-blue-500" : ""
+                  }`}
               >
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
@@ -239,11 +232,20 @@ const Earn = () => {
                     />
                   </div>
 
-                  <EarnImagePicker
-                    label="Upload your own image"
-                    helperText="If AI cover art fails, we will use your uploaded image instead."
-                    onChange={(img) => setFallbackCover(img)}
-                  />
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <EarnImagePicker
+                      label="Cover Image"
+                      helperText="Upload a custom cover image (optional)."
+                      storageKey="book-cover-img"
+                      onChange={(img) => setFallbackCover(img)}
+                    />
+                    <EarnImagePicker
+                      label="End Page Image"
+                      helperText="Image for the 'The End' page (optional)."
+                      storageKey="book-end-img"
+                      onChange={(img) => setEndImage(img)}
+                    />
+                  </div>
 
                   <Button
                     onClick={generateBook}
@@ -314,7 +316,7 @@ const Earn = () => {
                               <div className="flex items-center justify-between mt-2">
                                 {book.pages && Array.isArray(book.pages) && (
                                   <p className="text-xs text-slate-500">
-                                    {book.pages.length} page{book.pages.length === 1 ? "" : "s"}
+                                    {book.pages.filter(p => !String(p).includes("type")).length || book.pages.length} pages
                                   </p>
                                 )}
                                 <div className="flex items-center gap-1">
@@ -390,4 +392,3 @@ const Earn = () => {
 };
 
 export default Earn;
-

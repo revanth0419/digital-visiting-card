@@ -1,51 +1,19 @@
 import { useMemo, useState } from "react";
-import { Music4, Download, Wand2, PlayCircle } from "lucide-react";
+import { Music4, Download, Wand2, PlayCircle, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { apiFetch } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-
-type MusicResponse =
-  | { status: "ok"; audioBase64: string; mime?: string }
-  | { status: "error"; message?: string };
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const genres = ["lofi", "electronic", "ambient", "classical", "hip-hop", "pop", "rock", "cinematic"];
 
-const clampDuration = (value: number) => Math.min(300, Math.max(10, value));
-
-const generateMockWav = (seconds = 2, freq = 440) => {
-  const sampleRate = 44100;
-  const totalSamples = Math.floor(seconds * sampleRate);
-  const buffer = new ArrayBuffer(44 + totalSamples * 2);
-  const view = new DataView(buffer);
-  // RIFF/WAVE header
-  view.setUint32(0, 0x52494646, false); // "RIFF"
-  view.setUint32(4, 36 + totalSamples * 2, true);
-  view.setUint32(8, 0x57415645, false); // "WAVE"
-  view.setUint32(12, 0x666d7420, false); // "fmt "
-  view.setUint32(16, 16, true); // Subchunk1Size
-  view.setUint16(20, 1, true); // PCM
-  view.setUint16(22, 1, true); // Channels
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true); // byte rate
-  view.setUint16(32, 2, true); // block align
-  view.setUint16(34, 16, true); // bits per sample
-  view.setUint32(36, 0x64617461, false); // "data"
-  view.setUint32(40, totalSamples * 2, true);
-
-  const amplitude = 0.3 * 0x7fff;
-  for (let i = 0; i < totalSamples; i += 1) {
-    const sample = Math.sin((2 * Math.PI * freq * i) / sampleRate);
-    view.setInt16(44 + i * 2, sample * amplitude, true);
-  }
-
-  const uint = new Uint8Array(buffer);
-  const base64 = btoa(String.fromCharCode(...uint));
-  return `data:audio/wav;base64,${base64}`;
+const clampDuration = (value: number) => {
+  if (isNaN(value)) return 10;
+  return Math.min(300, Math.max(10, value));
 };
 
 const CustomizedMusicGenerator = () => {
@@ -56,59 +24,104 @@ const CustomizedMusicGenerator = () => {
   const [loading, setLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [downloadName, setDownloadName] = useState<string>("sample.mp3");
-  const mockAudioUrl = useMemo(() => generateMockWav(2, 440), []);
-
-  const setFallbackAudio = () => {
-    setAudioUrl(mockAudioUrl);
-    setDownloadName("sample.wav");
-    toast({
-      title: "Using mock audio",
-      description: "Backend not available. Playing a sample tone instead.",
-    });
-  };
+  const [errorState, setErrorState] = useState<string | null>(null);
 
   const handleGenerate = async () => {
+    setErrorState(null);
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt) {
       toast({ title: "Prompt required", description: "Tell us what to generate.", variant: "destructive" });
       return;
     }
+
     setLoading(true);
     setAudioUrl(null);
+
     try {
-      const { data, error } = await apiFetch<MusicResponse>("/generate-music", {
+      const response = await fetch("/api/generate-music", {
         method: "POST",
-        data: { prompt: trimmedPrompt, duration: clampDuration(duration), genre },
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: trimmedPrompt, duration: clampDuration(duration), genre }),
       });
 
-      if (error) {
-        console.error("[Music] API error", error);
+      const contentType = response.headers.get("content-type");
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
       }
 
-      if (data && data.status === "ok" && data.audioBase64) {
-        const mime = data.mime || "audio/mpeg";
-        const url = `data:${mime};base64,${data.audioBase64}`;
+      let finalBlob: Blob;
+      let finalExtension = "mp3";
+
+      if (contentType && contentType.includes("application/json")) {
+        const data = await response.json();
+        if (data.status === "error") throw new Error(data.message);
+        if (data.status === "ok" && data.audioBase64) {
+          const mime = data.mime || "audio/mpeg";
+          const binary = atob(data.audioBase64);
+          const array = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+          finalBlob = new Blob([array], { type: mime });
+          finalExtension = mime.includes("wav") ? "wav" : "mp3";
+        } else {
+          throw new Error("Invalid JSON response from server");
+        }
+      } else {
+        // Assume binary
+        finalBlob = await response.blob();
+        finalExtension = contentType?.includes("wav") ? "wav" : "mp3";
+      }
+
+      if (finalBlob) {
+        const url = URL.createObjectURL(finalBlob);
         setAudioUrl(url);
-        setDownloadName(`generated-${genre}.mp3`);
+        setDownloadName(`generated-${genre}.${finalExtension}`);
         toast({ title: "Music ready", description: "Enjoy your track!" });
       } else {
-        setFallbackAudio();
+        throw new Error("No audio data received");
       }
-    } catch (err) {
-      console.error("[Music] unexpected error", err);
-      setFallbackAudio();
+
+    } catch (err: any) {
+      console.error("[Music] error", err);
+      setErrorState(err.message || "Failed to generate music");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDownload = () => {
-    if (!audioUrl) return;
-    const link = document.createElement("a");
-    link.href = audioUrl;
-    link.download = downloadName;
-    link.click();
+    try {
+      if (!audioUrl) return;
+      const link = document.createElement("a");
+      link.href = audioUrl;
+      link.download = downloadName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error("Download failed", e);
+      toast({ title: "Download failed", description: "Could not download the audio file.", variant: "destructive" });
+    }
   };
+
+  if (errorState) {
+    return (
+      <Card className="bg-slate-900 border-slate-800">
+        <CardContent className="p-6">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              {errorState}
+              <div className="mt-2">
+                <Button onClick={() => setErrorState(null)} variant="outline" size="sm">Try Again</Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-slate-900 border-slate-800">
@@ -146,7 +159,7 @@ const CustomizedMusicGenerator = () => {
               min={10}
               max={300}
               value={duration}
-              onChange={(e) => setDuration(clampDuration(Number(e.target.value) || 0))}
+              onChange={(e) => setDuration(clampDuration(Number(e.target.value)))}
               className="bg-slate-950 border-slate-800"
             />
           </div>
@@ -186,7 +199,7 @@ const CustomizedMusicGenerator = () => {
         {audioUrl && (
           <div className="space-y-3 rounded-lg border border-slate-800 bg-slate-950 p-4">
             <p className="text-sm text-slate-200">Preview</p>
-            <audio controls src={audioUrl} className="w-full" />
+            <audio controls src={audioUrl} className="w-full" onError={() => toast({ title: "Playback error", description: "The audio could not be played.", variant: "destructive" })} />
             <Button
               type="button"
               variant="outline"
@@ -204,4 +217,3 @@ const CustomizedMusicGenerator = () => {
 };
 
 export default CustomizedMusicGenerator;
-

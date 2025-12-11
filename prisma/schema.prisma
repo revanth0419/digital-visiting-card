@@ -84,6 +84,7 @@ model Book {
   content       String
   pages         Json?
   coverImageUrl String?
+  endImageUrl   String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
 }
