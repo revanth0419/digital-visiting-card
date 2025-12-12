@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client"; // TODO: Supabase Auth/Storage still in use
+import { supabase } from "@/integrations/supabase/client";
 import { uploadRateLimiter } from "@/lib/rate-limit";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload, Save, LayoutList, LayoutGrid, Rows3, Palette, Image } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { apiFetch } from "@/lib/api";
 
 type ProfileEditorProps = {
   userId: string;
@@ -31,6 +30,7 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
   const [profileTheme, setProfileTheme] = useState("default");
   const [backgroundUrl, setBackgroundUrl] = useState("");
   const [backgroundType, setBackgroundType] = useState("gradient");
+  const [signedAvatarUrl, setSignedAvatarUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -39,28 +39,54 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
     fetchProfile();
   }, [userId]);
 
-  const fetchProfile = async () => {
-    const { data, error } = await apiFetch<any>(`/profiles/by-user/${userId}`);
+  const getSignedUrl = async (bucket: string, path: string) => {
+    if (!path) return "";
+    try {
+      const { data } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+      return data?.signedUrl || "";
+    } catch {
+      return "";
+    }
+  };
 
-    if (error) {
+  const fetchProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setProfileId(data.id);
+        setUsername(data.username || "");
+        setDisplayName(data.display_name || "");
+        setBio(data.bio || "");
+        setAvatarUrl(data.avatar_url || "");
+        setThemeColor(data.theme_color || "#8b5cf6");
+        setLayoutStyle(data.layout_style || "list");
+        setProfileTheme(data.profile_theme || "default");
+        setBackgroundUrl(data.background_url || "");
+        setBackgroundType(data.background_type || "gradient");
+
+        // Get signed URL for avatar
+        if (data.avatar_url) {
+          const signedUrl = await getSignedUrl("avatars", data.avatar_url);
+          setSignedAvatarUrl(signedUrl);
+        }
+      }
+    } catch (error: any) {
+      console.error("Failed to fetch profile:", error);
       toast({
         title: "Error",
-        description: error?.message || error || "Failed to load profile.",
+        description: error?.message || "Failed to load profile.",
         variant: "destructive",
       });
-    } else if (data) {
-      setProfileId(data.id);
-      setUsername(data.username || "");
-      setDisplayName(data.display_name || "");
-      setBio(data.bio || "");
-      setAvatarUrl(data.avatar_url || "");
-      setThemeColor(data.theme_color || "#8b5cf6");
-      setLayoutStyle(data.layout_style || "list");
-      setProfileTheme(data.profile_theme || "default");
-      setBackgroundUrl(data.background_url || "");
-      setBackgroundType(data.background_type || "gradient");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,7 +94,6 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
       const file = event.target.files?.[0];
       if (!file) return;
 
-      // Check rate limit
       const { allowed, retryAfter } = uploadRateLimiter.checkLimit();
       if (!allowed) {
         toast({
@@ -98,17 +123,11 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
       }
 
       setUploading(true);
-
-      // Record upload attempt
       uploadRateLimiter.recordAttempt();
 
+      // Delete old avatar if exists
       if (avatarUrl) {
-        const oldPath = avatarUrl.split('/').pop();
-        if (oldPath) {
-          await supabase.storage
-            .from('avatars')
-            .remove([`${userId}/${oldPath}`]);
-        }
+        await supabase.storage.from('avatars').remove([avatarUrl]);
       }
 
       const fileExt = file.name.split('.').pop();
@@ -121,17 +140,18 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
 
       if (uploadError) throw uploadError;
 
-      // Store the file path (not public URL) for signed URL generation
-      const storagePath = filePath;
+      // Update profile with new avatar path
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: filePath })
+        .eq("user_id", userId);
 
-      const { error: updateError } = await apiFetch(`/profiles/${userId}`, {
-        method: "PUT",
-        body: JSON.stringify({ avatar_url: storagePath }),
-      });
+      if (updateError) throw updateError;
 
-      if (updateError) throw updateError as any;
+      setAvatarUrl(filePath);
+      const signedUrl = await getSignedUrl("avatars", filePath);
+      setSignedAvatarUrl(signedUrl);
 
-      setAvatarUrl(storagePath);
       toast({
         title: "Success",
         description: "Avatar uploaded successfully!",
@@ -152,7 +172,6 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
       const file = event.target.files?.[0];
       if (!file) return;
 
-      // Check rate limit
       const { allowed, retryAfter } = uploadRateLimiter.checkLimit();
       if (!allowed) {
         toast({
@@ -182,17 +201,10 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
       }
 
       setUploadingBg(true);
-
-      // Record upload attempt
       uploadRateLimiter.recordAttempt();
 
       if (backgroundUrl) {
-        const oldPath = backgroundUrl.split('/').pop();
-        if (oldPath) {
-          await supabase.storage
-            .from('media')
-            .remove([`${userId}/backgrounds/${oldPath}`]);
-        }
+        await supabase.storage.from('media').remove([backgroundUrl]);
       }
 
       const fileExt = file.name.split('.').pop();
@@ -205,10 +217,7 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
 
       if (uploadError) throw uploadError;
 
-      // Store the file path (not public URL) for signed URL generation
-      const storagePath = filePath;
-
-      setBackgroundUrl(storagePath);
+      setBackgroundUrl(filePath);
       setBackgroundType("image");
       
       toast({
@@ -229,33 +238,35 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
   const handleSave = async () => {
     setSaving(true);
 
-    const { error } = await apiFetch(`/profiles/${userId}`, {
-      method: "PUT",
-      body: JSON.stringify({
-        display_name: displayName,
-        bio,
-        theme_color: themeColor,
-        layout_style: layoutStyle,
-        profile_theme: profileTheme,
-        background_url: backgroundUrl,
-        background_type: backgroundType,
-      }),
-    });
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          display_name: displayName,
+          bio,
+          theme_color: themeColor,
+          layout_style: layoutStyle,
+          profile_theme: profileTheme,
+          background_url: backgroundUrl,
+          background_type: backgroundType,
+        })
+        .eq("user_id", userId);
 
-    if (error) {
-      toast({
-        title: "Error",
-        description: error?.message || error || "Failed to save profile",
-        variant: "destructive",
-      });
-    } else {
+      if (error) throw error;
+
       toast({
         title: "Success!",
         description: "Profile updated successfully.",
       });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to save profile",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
   };
 
   if (loading) {
@@ -288,9 +299,9 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
             {/* Avatar */}
             <div className="flex flex-col items-center gap-4">
               <Avatar className="w-24 h-24 border-4" style={{ borderColor: themeColor }}>
-                <AvatarImage src={avatarUrl} alt={displayName || username} />
+                <AvatarImage src={signedAvatarUrl || avatarUrl} alt={displayName || username} />
                 <AvatarFallback className="text-2xl" style={{ backgroundColor: themeColor + "20", color: themeColor }}>
-                  {(displayName || username).charAt(0).toUpperCase()}
+                  {(displayName || username || "U").charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="text-center">
@@ -489,52 +500,34 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
                 Custom Background
               </Label>
               <p className="text-sm text-muted-foreground mb-3">
-                Upload a custom background image for your profile
+                Upload a custom background image
               </p>
-
-              <div className="flex gap-2">
-                <input
-                  ref={bgInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleBackgroundUpload}
-                  className="hidden"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => bgInputRef.current?.click()}
-                  disabled={uploadingBg}
-                  className="flex-1"
-                >
-                  {uploadingBg ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload Image
-                    </>
-                  )}
-                </Button>
-                {backgroundUrl && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setBackgroundUrl("");
-                      setBackgroundType("gradient");
-                    }}
-                  >
-                    Remove
-                  </Button>
+              <input
+                ref={bgInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleBackgroundUpload}
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => bgInputRef.current?.click()}
+                disabled={uploadingBg}
+              >
+                {uploadingBg ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Background
+                  </>
                 )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Max 10MB • Will replace theme background
-              </p>
+              </Button>
+              <p className="text-xs text-muted-foreground">Max 10MB (JPG, PNG, WEBP)</p>
             </div>
           </TabsContent>
         </Tabs>

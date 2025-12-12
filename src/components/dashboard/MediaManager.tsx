@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client"; // TODO: Supabase Storage still in use
-import { getSignedUrl, extractStoragePath } from "@/lib/storage";
+import { supabase } from "@/integrations/supabase/client";
 import { uploadRateLimiter } from "@/lib/rate-limit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,7 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { apiFetch, buildQuery } from "@/lib/api";
 
 type MediaManagerProps = {
   userId: string;
@@ -50,20 +48,34 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
     fetchProfileAndMedia();
   }, [userId]);
 
+  const getSignedUrl = async (bucket: string, path: string) => {
+    if (!path) return "";
+    try {
+      const { data } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+      return data?.signedUrl || "";
+    } catch {
+      return "";
+    }
+  };
+
   const fetchProfileAndMedia = async () => {
     try {
       // Get profile ID
-      const { data: profile, error: profileError } = await apiFetch<{ id: string }>(
-        `/profiles/by-user/${userId}`
-      );
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
 
       if (profileError) throw profileError;
       setProfileId(profile.id);
 
       // Get media
-      const { data, error } = await apiFetch<Media[]>(
-        `/media${buildQuery({ profileId: profile.id })}`
-      );
+      const { data, error } = await supabase
+        .from("media")
+        .select("*")
+        .eq("profile_id", profile.id)
+        .order("order_index", { ascending: true });
 
       if (error) throw error;
       setMedia((data as Media[]) || []);
@@ -72,8 +84,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       const urls: Record<string, string> = {};
       if (data) {
         for (const item of data) {
-          const path = extractStoragePath(item.url) || item.url;
-          const signedUrl = await getSignedUrl('media', path);
+          const signedUrl = await getSignedUrl('media', item.url);
           if (signedUrl) {
             urls[item.id] = signedUrl;
           }
@@ -95,7 +106,6 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Check rate limit
     const { allowed, retryAfter } = uploadRateLimiter.checkLimit();
     if (!allowed) {
       toast({
@@ -106,7 +116,6 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       return;
     }
 
-    // Validate file type
     const isImage = file.type.startsWith('image/');
     const isVideo = file.type.startsWith('video/');
     
@@ -119,7 +128,6 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       return;
     }
 
-    // Validate file size (50MB for videos, 5MB for images)
     const maxSize = isVideo ? 52428800 : 5242880;
     if (file.size > maxSize) {
       toast({
@@ -130,7 +138,6 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       return;
     }
 
-    // Set selected file and create preview
     setSelectedFile(file);
     const preview = URL.createObjectURL(file);
     setPreviewUrl(preview);
@@ -159,7 +166,6 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       setUploading(true);
       setUploadProgress(0);
 
-      // Record upload attempt
       uploadRateLimiter.recordAttempt();
 
       const isImage = selectedFile.type.startsWith('image/');
@@ -167,12 +173,10 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
 
-      // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 200);
 
-      // Upload file
       const { error: uploadError } = await supabase.storage
         .from('media')
         .upload(filePath, selectedFile);
@@ -180,35 +184,16 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       clearInterval(progressInterval);
       setUploadProgress(95);
 
-      if (uploadError) {
-        // Provide more helpful error messages for bucket issues
-        if (uploadError.message?.includes('Bucket not found') || 
-            uploadError.message?.includes('bucket') ||
-            uploadError.message?.toLowerCase().includes('does not exist')) {
-          throw new Error(
-            'Storage bucket "media" not found. ' +
-            'Please create the bucket in your Supabase dashboard (Storage > New bucket) ' +
-            'or run the Supabase migration that creates storage buckets. ' +
-            'The bucket should be named "media" and set to private.'
-          );
-        }
-        throw uploadError;
-      }
-
-      // Store the file path (not public URL) for signed URL generation
-      const storagePath = filePath;
+      if (uploadError) throw uploadError;
 
       // Add to database
-      const { error: insertError } = await apiFetch("/media", {
-        method: "POST",
-        body: JSON.stringify({
-          profile_id: profileId,
-          type: isImage ? 'image' : 'video',
-          url: storagePath,
-          title: title.trim(),
-          description: description.trim() || null,
-          order_index: media.length,
-        }),
+      const { error: insertError } = await supabase.from("media").insert({
+        profile_id: profileId,
+        type: isImage ? 'image' : 'video',
+        url: filePath,
+        title: title.trim(),
+        description: description.trim() || null,
+        order_index: media.length,
       });
 
       if (insertError) throw insertError;
@@ -230,7 +215,6 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
         fileInputRef.current.value = "";
       }
 
-      // Refresh media list
       await fetchProfileAndMedia();
     } catch (error: any) {
       toast({
@@ -258,11 +242,10 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
   const handleDelete = async (mediaItem: Media) => {
     try {
       // Delete from storage
-      const path = mediaItem.url.split('/').slice(-2).join('/');
-      await supabase.storage.from('media').remove([path]);
+      await supabase.storage.from('media').remove([mediaItem.url]);
 
       // Delete from database
-      const { error } = await apiFetch(`/media/${mediaItem.id}`, { method: "DELETE" });
+      const { error } = await supabase.from("media").delete().eq("id", mediaItem.id);
 
       if (error) throw error;
 
@@ -308,7 +291,6 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
         <CardContent className="space-y-6">
           {/* Upload Form */}
           <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-            {/* Preview Section */}
             {previewUrl && (
               <div className="relative rounded-lg overflow-hidden bg-muted">
                 {selectedFile?.type.startsWith('image/') ? (
@@ -358,7 +340,6 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
               />
             </div>
 
-            {/* Upload Progress */}
             {uploading && uploadProgress > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
@@ -435,7 +416,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
           {/* Media Grid */}
           {media.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {media.map((item) => (
+              {media.map((item) => (
                 <div
                   key={item.id}
                   className="group relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer"
@@ -495,30 +476,23 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>
-              {media.find(m => m.url === lightboxUrl)?.title}
+              {media.find(m => signedMediaUrls[m.id] === lightboxUrl || m.url === lightboxUrl)?.title}
             </DialogTitle>
           </DialogHeader>
-          <div className="relative">
-            {lightboxType === "image" ? (
-              <img
-                src={lightboxUrl || ""}
-                alt="Preview"
-                className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
-              />
-            ) : (
-              <video
-                src={lightboxUrl || ""}
-                controls
-                className="w-full h-auto max-h-[70vh] rounded-lg"
-                autoPlay
-              />
-            )}
-            {media.find(m => m.url === lightboxUrl)?.description && (
-              <p className="mt-4 text-sm text-muted-foreground">
-                {media.find(m => m.url === lightboxUrl)?.description}
-              </p>
-            )}
-          </div>
+          {lightboxType === "image" ? (
+            <img
+              src={lightboxUrl || ""}
+              alt="Media"
+              className="w-full h-auto max-h-[70vh] object-contain"
+            />
+          ) : (
+            <video
+              src={lightboxUrl || ""}
+              className="w-full h-auto max-h-[70vh]"
+              controls
+              autoPlay
+            />
+          )}
         </DialogContent>
       </Dialog>
     </>
