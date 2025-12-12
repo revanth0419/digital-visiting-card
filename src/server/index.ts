@@ -520,8 +520,8 @@ app.post("/api/books/generate", async (req, res) => {
         coverImageUrl = imageResponse.data?.[0]?.url ?? null;
 
         console.log("[books/generate] Cover image generated:", coverImageUrl);
-
-      } catch (imageError: any) {
+      }
+    } catch (imageError: any) {
         console.error("[books/generate] OpenAI image error:", {
           message: imageError?.message,
           status: imageError?.response?.status,

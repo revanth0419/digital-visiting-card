@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client"; // TODO: Supabase Auth still in use
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,7 +11,6 @@ import {
 import { Bell, Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { apiFetch, buildQuery } from "@/lib/api";
 
 interface Notification {
   id: string;
@@ -38,9 +37,11 @@ export default function NotificationsDropdown() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await apiFetch<Notification[]>(
-        `/notifications${buildQuery({ userId: user.id })}`
-      );
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
@@ -53,13 +54,12 @@ export default function NotificationsDropdown() {
     }
   };
 
-  // TODO: Realtime notifications removed; consider WebSocket/polling if needed.
-
   const markAsRead = async (notificationId: string) => {
     try {
-      const { error } = await apiFetch(`/notifications/${notificationId}/read`, {
-        method: "PUT",
-      });
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("id", notificationId);
 
       if (error) throw error;
 
@@ -77,10 +77,10 @@ export default function NotificationsDropdown() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { error } = await apiFetch(
-        `/notifications/read-all${buildQuery({ userId: user.id })}`,
-        { method: "PUT" }
-      );
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("user_id", user.id);
 
       if (error) throw error;
 
@@ -95,7 +95,10 @@ export default function NotificationsDropdown() {
 
   const deleteNotification = async (notificationId: string) => {
     try {
-      const { error } = await apiFetch(`/notifications/${notificationId}`, { method: "DELETE" });
+      const { error } = await supabase
+        .from("notifications")
+        .delete()
+        .eq("id", notificationId);
 
       if (error) throw error;
 

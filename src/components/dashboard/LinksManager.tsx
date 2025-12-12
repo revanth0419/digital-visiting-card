@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client"; // TODO: Supabase Functions/auth still in use for metadata/auth
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { Plus, Trash2, GripVertical, Loader2 } from "lucide-react";
-import { apiFetch, buildQuery } from "@/lib/api";
 import {
   DndContext,
   closestCenter,
@@ -126,15 +125,19 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   const fetchLinks = async () => {
     try {
       setLoading(true);
-      const { data: profileData, error: profileError } = await apiFetch<{ id: string }>(
-        `/profiles/by-user/${userId}`
-      );
+      
+      // Get profile
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
 
-      if (!profileData || profileError) {
+      if (profileError || !profileData) {
         console.error("Failed to fetch profile:", profileError);
         toast({
           title: "Error",
-          description: profileError || "Failed to load profile. Please refresh the page.",
+          description: "Failed to load profile. Please refresh the page.",
           variant: "destructive",
         });
         setLoading(false);
@@ -143,15 +146,18 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
 
       setProfileId(profileData.id);
 
-      const { data, error } = await apiFetch<Link[]>(
-        `/links${buildQuery({ profileId: profileData.id })}`
-      );
+      // Get links
+      const { data, error } = await supabase
+        .from("links")
+        .select("*")
+        .eq("profile_id", profileData.id)
+        .order("order_index", { ascending: true });
 
       if (error) {
         console.error("Failed to fetch links:", error);
         toast({
           title: "Error",
-          description: error || "Failed to load links.",
+          description: error.message || "Failed to load links.",
           variant: "destructive",
         });
         setLinks([]);
@@ -171,7 +177,6 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   };
 
   const normalizeUrl = (url: string): string => {
-    // If URL starts with www., add https://
     if (url.trim().startsWith("www.")) {
       return `https://${url.trim()}`;
     }
@@ -190,7 +195,6 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   const fetchLinkMetadata = async (url: string) => {
     setFetchingMetadata(true);
     try {
-      console.log('Fetching metadata for:', url);
       const { data, error } = await supabase.functions.invoke('fetch-link-metadata', {
         body: { url },
       });
@@ -205,8 +209,6 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
         return { imageUrl: null, title: null, price: null };
       }
 
-      console.log('Metadata received:', data);
-      
       if (data?.imageUrl) {
         toast({
           title: "Preview loaded!",
@@ -253,7 +255,6 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
       return;
     }
 
-    // Normalize URL (add https:// to www. URLs)
     const normalizedUrl = normalizeUrl(newUrl);
 
     if (!validateUrl(normalizedUrl)) {
@@ -276,9 +277,8 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
 
     setAdding(true);
 
-    const { error } = await apiFetch("/links", {
-      method: "POST",
-      body: JSON.stringify({
+    try {
+      const { error } = await supabase.from("links").insert({
         profile_id: profileId,
         title: newTitle,
         url: normalizedUrl,
@@ -288,49 +288,52 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
         order_index: links.length,
         is_shopping_link: isShoppingLink,
         show_in_links: showInLinks,
-      }),
-    });
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
       });
-    } else {
+
+      if (error) throw error;
+
       toast({
         title: "Link added!",
         description: "Your new link has been created.",
       });
-    setNewTitle("");
-    setNewUrl("");
-    setNewIcon("");
-    setPreviewImage(null);
-    setPreviewPrice(null);
-    setIsShoppingLink(false);
-    setShowInLinks(true);
-    setManualImageUrl("");
-    fetchLinks();
-    }
 
-    setAdding(false);
-  };
-
-  const handleDeleteLink = async (id: string) => {
-    const { error } = await apiFetch(`/links/${id}`, { method: "DELETE" });
-
-    if (error) {
+      setNewTitle("");
+      setNewUrl("");
+      setNewIcon("");
+      setPreviewImage(null);
+      setPreviewPrice(null);
+      setIsShoppingLink(false);
+      setShowInLinks(true);
+      setManualImageUrl("");
+      fetchLinks();
+    } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive",
       });
-    } else {
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleDeleteLink = async (id: string) => {
+    try {
+      const { error } = await supabase.from("links").delete().eq("id", id);
+
+      if (error) throw error;
+
       toast({
         title: "Link deleted",
         description: "The link has been removed.",
       });
       fetchLinks();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -348,15 +351,12 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
     setLinks(newLinks);
 
     // Update order in database
-    const updates = newLinks.map((link, index) => ({
-      id: link.id,
-      order_index: index,
-    }));
-
-    await apiFetch("/links/order", {
-      method: "PUT",
-      body: JSON.stringify({ updates }),
-    });
+    for (let i = 0; i < newLinks.length; i++) {
+      await supabase
+        .from("links")
+        .update({ order_index: i })
+        .eq("id", newLinks[i].id);
+    }
   };
 
   if (loading) {
@@ -500,25 +500,23 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
 
         {/* Links List */}
         {links.length > 0 ? (
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground mb-2">
-              Drag to reorder your links
-            </p>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext items={links} strategy={verticalListSortingStrategy}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={links.map((l) => l.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-2">
                 {links.map((link) => (
                   <SortableLink key={link.id} link={link} onDelete={handleDeleteLink} />
                 ))}
-              </SortableContext>
-            </DndContext>
-          </div>
+              </div>
+            </SortableContext>
+          </DndContext>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
-            <p>No links yet. Add your first link above!</p>
+            <p>No links yet</p>
+            <p className="text-sm">Add your first link above</p>
           </div>
         )}
       </CardContent>
