@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client"; // TODO: Supabase Auth still in use
+import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -8,7 +8,6 @@ import { Card } from "@/components/ui/card";
 import { Search as SearchIcon, UserPlus, UserCheck, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { apiFetch, buildQuery } from "@/lib/api";
 
 interface Profile {
   id: string;
@@ -41,24 +40,30 @@ export default function Search() {
     } else {
       setProfiles([]);
     }
-  }, [searchQuery]);
+  }, [searchQuery, currentUserId]);
 
   const searchProfiles = async () => {
     setLoading(true);
     try {
-      const { data, error } = await apiFetch<Profile[]>(
-        `/profiles/search${buildQuery({ q: searchQuery, limit: 20 })}`
-      );
-      if (error) throw error;
+      // Search profiles using Supabase
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
+        .limit(20);
 
-      if (data && currentUserId) {
-        const { data: subscriptions } = await apiFetch<{ subscribed_to_id: string }[]>(
-          `/subscriptions${buildQuery({ subscriberId: currentUserId })}`
-        );
+      if (profilesError) throw profilesError;
+
+      if (profilesData && currentUserId) {
+        // Get user's subscriptions
+        const { data: subscriptions } = await supabase
+          .from("subscriptions")
+          .select("subscribed_to_id")
+          .eq("subscriber_id", currentUserId);
 
         const subscribedIds = new Set(subscriptions?.map(s => s.subscribed_to_id) || []);
         
-        const profilesWithStatus = data
+        const profilesWithStatus = profilesData
           .filter(p => p.user_id !== currentUserId)
           .map(p => ({
             ...p,
@@ -66,8 +71,8 @@ export default function Search() {
           }));
 
         setProfiles(profilesWithStatus);
-      } else if (data) {
-        setProfiles(data);
+      } else if (profilesData) {
+        setProfiles(profilesData);
       }
     } catch (error) {
       console.error("Error searching profiles:", error);
@@ -86,22 +91,22 @@ export default function Search() {
     try {
       if (profile.isSubscribed) {
         // Unsubscribe
-        const { error } = await apiFetch(
-          `/subscriptions${buildQuery({ subscriberId: currentUserId, subscribedToId: profile.user_id })}`,
-          { method: "DELETE" }
-        );
+        const { error } = await supabase
+          .from("subscriptions")
+          .delete()
+          .eq("subscriber_id", currentUserId)
+          .eq("subscribed_to_id", profile.user_id);
 
         if (error) throw error;
         toast.success(`Unsubscribed from ${profile.display_name || profile.username}`);
       } else {
         // Subscribe
-        const { error } = await apiFetch("/subscriptions", {
-          method: "POST",
-          body: JSON.stringify({
+        const { error } = await supabase
+          .from("subscriptions")
+          .insert({
             subscriber_id: currentUserId,
             subscribed_to_id: profile.user_id
-          })
-        });
+          });
 
         if (error) throw error;
         toast.success(`Subscribed to ${profile.display_name || profile.username}`);

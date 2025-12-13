@@ -13,8 +13,6 @@ import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
 import MediaManager from "@/components/dashboard/MediaManager";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-import { apiFetch } from "@/lib/api";
-
 const Dashboard = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,17 +63,19 @@ const Dashboard = () => {
   const handleViewProfile = async () => {
     if (!session?.user?.id) return;
 
-    const { data: profile } = await apiFetch<{ username: string }>(
-      `/profiles/by-user/${session.user.id}`
-    );
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("user_id", session.user.id)
+      .single();
 
-    if (profile?.username) {
-      window.open(`/u/${profile.username}`, "_blank");
-    } else {
+    if (error || !profile?.username) {
       toast({
         title: "Profile not found",
         description: "Please complete your profile first.",
       });
+    } else {
+      window.open(`/u/${profile.username}`, "_blank");
     }
   };
 

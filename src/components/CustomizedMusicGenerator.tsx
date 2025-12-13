@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Music4, Download, Wand2, PlayCircle, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,22 +39,41 @@ const CustomizedMusicGenerator = () => {
     setAudioUrl(null);
 
     try {
-      const response = await fetch("/api/generate-music", {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-music`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken && { "Authorization": `Bearer ${accessToken}` }),
+        },
         body: JSON.stringify({ prompt: trimmedPrompt, duration: clampDuration(duration), genre }),
       });
 
-      const contentType = response.headers.get("content-type");
+      const contentType = response.headers.get("content-type") || "";
 
       if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
+        let errorMessage = "Failed to generate music";
+        if (contentType.includes("application/json")) {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        }
+
+        if (response.status === 503) {
+          setErrorState("Music generation requires an ElevenLabs API key. Please contact support to configure it.");
+        } else if (response.status === 429) {
+          setErrorState("Rate limit exceeded. Please try again later.");
+        } else {
+          setErrorState(errorMessage);
+        }
+        return;
       }
 
       let finalBlob: Blob;
       let finalExtension = "mp3";
 
-      if (contentType && contentType.includes("application/json")) {
+      if (contentType.includes("application/json")) {
         const data = await response.json();
         if (data.status === "error") throw new Error(data.message);
         if (data.status === "ok" && data.audioBase64) {
@@ -67,7 +87,6 @@ const CustomizedMusicGenerator = () => {
           throw new Error("Invalid JSON response from server");
         }
       } else {
-        // Assume binary
         finalBlob = await response.blob();
         finalExtension = contentType?.includes("wav") ? "wav" : "mp3";
       }
