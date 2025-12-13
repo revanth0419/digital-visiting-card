@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ExternalLink, Zap, Video, QrCode, ChevronDown, Link2, ShoppingBag, Image as ImageIcon, UserPlus, UserCheck } from "lucide-react";
+import { ExternalLink, Zap, Video, QrCode, ChevronDown, Link2, ShoppingBag, Image as ImageIcon, UserPlus, UserCheck, BookOpen } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,7 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { apiFetch, buildQuery } from "@/lib/api";
+// Using Supabase directly instead of custom API
 
 type Profile = {
   id: string;
@@ -81,9 +81,11 @@ const Profile = () => {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUserId(user?.id || null);
 
-      const { data: profileData, error: profileError } = await apiFetch<Profile>(
-        `/profiles/username/${username}`
-      );
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("username", username)
+        .single();
 
       if (profileError || !profileData) {
         setLoading(false);
@@ -93,19 +95,26 @@ const Profile = () => {
       setProfile(profileData);
 
       if (user && profileData.user_id && profileData.user_id !== user.id) {
-        const { data: subscription } = await apiFetch(
-          `/subscriptions${buildQuery({ subscriberId: user.id, subscribedToId: profileData.user_id })}`
-        );
+        const { data: subscription } = await supabase
+          .from("subscriptions")
+          .select("*")
+          .eq("subscriber_id", user.id)
+          .eq("subscribed_to_id", profileData.user_id)
+          .maybeSingle();
         setIsSubscribed(!!subscription);
       }
 
-      const { data: booksData } = await apiFetch<any[]>(`/books/public/${username}`);
+      const { data: booksData } = await supabase
+        .from("books")
+        .select("*")
+        .eq("user_id", profileData.user_id)
+        .order("created_at", { ascending: false });
       if (booksData) setBooks(booksData);
 
       // Generate signed URLs for avatar and background with longer expiry
       if (profileData.avatar_url) {
         const path = extractStoragePath(profileData.avatar_url) || profileData.avatar_url;
-        const signedUrl = await getSignedUrl('avatars', path, 7200); // 2 hours
+        const signedUrl = await getSignedUrl('avatars', path, 7200);
         if (signedUrl) setSignedAvatarUrl(signedUrl);
       } else {
         setSignedAvatarUrl(null);
@@ -113,32 +122,36 @@ const Profile = () => {
 
       if (profileData.background_url && profileData.background_type === 'image') {
         const path = extractStoragePath(profileData.background_url) || profileData.background_url;
-        const signedUrl = await getSignedUrl('media', path, 7200); // 2 hours
+        const signedUrl = await getSignedUrl('media', path, 7200);
         if (signedUrl) setSignedBackgroundUrl(signedUrl);
       } else {
         setSignedBackgroundUrl(null);
       }
 
-      const { data: linksData } = await apiFetch<Link[]>(
-        `/links${buildQuery({ profileId: profileData.id, active: true })}`
-      );
+      const { data: linksData } = await supabase
+        .from("links")
+        .select("*")
+        .eq("profile_id", profileData.id)
+        .eq("is_active", true)
+        .order("order_index", { ascending: true });
 
       if (linksData) {
         setLinks(linksData);
       }
 
-      const { data: mediaData } = await apiFetch<Media[]>(
-        `/media${buildQuery({ profileId: profileData.id })}`
-      );
+      const { data: mediaData } = await supabase
+        .from("media")
+        .select("*")
+        .eq("profile_id", profileData.id)
+        .order("order_index", { ascending: true });
 
       if (mediaData) {
         setMedia(mediaData as Media[]);
         
-        // Generate signed URLs for all media with longer expiry
         const urls: Record<string, string> = {};
         for (const item of mediaData) {
           const path = extractStoragePath(item.url) || item.url;
-          const signedUrl = await getSignedUrl('media', path, 7200); // 2 hours
+          const signedUrl = await getSignedUrl('media', path, 7200);
           if (signedUrl) {
             urls[item.id] = signedUrl;
           }
@@ -150,7 +163,6 @@ const Profile = () => {
     };
 
     fetchProfile();
-    // TODO: Realtime updates removed; consider replacing with WebSockets or polling.
   }, [username]);
 
   const openLightbox = (url: string, type: "image" | "video") => {
@@ -780,10 +792,11 @@ const Profile = () => {
                     onClick={async () => {
                       try {
                         if (isSubscribed) {
-                          const { error } = await apiFetch(
-                            `/subscriptions${buildQuery({ subscriberId: currentUserId, subscribedToId: profile.user_id })}`,
-                            { method: "DELETE" }
-                          );
+                          const { error } = await supabase
+                            .from("subscriptions")
+                            .delete()
+                            .eq("subscriber_id", currentUserId)
+                            .eq("subscribed_to_id", profile.user_id);
 
                           if (error) throw error;
                           setIsSubscribed(false);
@@ -792,13 +805,12 @@ const Profile = () => {
                             description: `You will no longer receive updates from ${profile.display_name || profile.username}`,
                           });
                         } else {
-                          const { error } = await apiFetch("/subscriptions", {
-                            method: "POST",
-                            body: JSON.stringify({
+                          const { error } = await supabase
+                            .from("subscriptions")
+                            .insert({
                               subscriber_id: currentUserId,
                               subscribed_to_id: profile.user_id
-                            })
-                          });
+                            });
 
                           if (error) throw error;
                           setIsSubscribed(true);

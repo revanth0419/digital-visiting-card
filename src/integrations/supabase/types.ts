@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      books: {
+        Row: {
+          content: string | null
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          end_image_url: string | null
+          id: string
+          pages: Json | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          end_image_url?: string | null
+          id?: string
+          pages?: Json | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          end_image_url?: string | null
+          id?: string
+          pages?: Json | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       links: {
         Row: {
           created_at: string | null

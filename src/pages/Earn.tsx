@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { apiFetch } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,19 +46,35 @@ const Earn = () => {
   }, []);
 
   useEffect(() => {
-    const load = async () => {
+    const loadBooks = async () => {
       if (!userId) return;
       setLoadingBooks(true);
-      const { data, error } = await apiFetch<Book[]>(`/books/by-user/${userId}`);
+      
+      const { data, error } = await supabase
+        .from("books")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      
       if (error) {
-        toast({ title: "Error", description: error, variant: "destructive" });
+        console.error("Error loading books:", error);
+        toast({ title: "Error", description: "Failed to load books", variant: "destructive" });
       } else if (data) {
-        setBooks(data);
+        setBooks(data.map(book => ({
+          id: book.id,
+          title: book.title,
+          description: book.description,
+          content: book.content,
+          pages: book.pages as string[] | null,
+          coverImageUrl: book.cover_image_url,
+          endImageUrl: book.end_image_url,
+          createdAt: book.created_at,
+        })));
       }
       setLoadingBooks(false);
     };
-    load();
-  }, [userId]);
+    loadBooks();
+  }, [userId, toast]);
 
   const panels = useMemo(
     () => [
@@ -94,54 +109,68 @@ const Earn = () => {
       toast({ title: "Prompt required", description: "Enter an idea for the book", variant: "destructive" });
       return;
     }
+    
     setGenerating(true);
-    const { data, error } = await apiFetch<Book>("/books/generate", {
-      method: "POST",
-      data: {
-        userId,
-        prompt,
-        title: title || undefined,
-        description: description || undefined,
-        coverImageData: fallbackCover || undefined,
-        endImageData: endImage || undefined,
-      },
-    });
-    setGenerating(false);
-    if (error || !data) {
+    
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      
+      if (!accessToken) {
+        toast({ title: "Session expired", description: "Please log in again", variant: "destructive" });
+        setGenerating(false);
+        return;
+      }
+      
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-book`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          prompt,
+          title: title || undefined,
+          description: description || undefined,
+          coverImageData: fallbackCover || undefined,
+          endImageData: endImage || undefined,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate book");
+      }
+      
+      toast({ title: "Book generated successfully" });
+      setPrompt("");
+      setTitle("");
+      setDescription("");
+      setFallbackCover(null);
+      setEndImage(null);
+      
+      // Add the new book to the list
+      setBooks((prev) => [{
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        pages: data.pages,
+        coverImageUrl: data.coverImageUrl,
+        endImageUrl: data.endImageUrl,
+        createdAt: data.createdAt,
+      }, ...prev]);
+      
+    } catch (error) {
       console.error("[Earn] Book generation error:", error);
-      const errorMessage = typeof error === "string"
-        ? error
-        : (error?.details && typeof error.details === "string" && !error.details.includes("API key"))
-          ? error.details
-          : "Please try again";
-
       toast({
         title: "Book generation failed",
-        description: errorMessage,
+        description: error instanceof Error ? error.message : "Please try again",
         variant: "destructive",
       });
-      return;
     }
-    toast({ title: "Book generated successfully" });
-    setPrompt("");
-    setTitle("");
-    setDescription("");
-    // Refresh books list
-    setLoadingBooks(true);
-    const { data: refreshedBooks, error: refreshError } = await apiFetch<Book[]>(`/books/by-user/${userId}`);
-    if (!refreshError && refreshedBooks) {
-      setBooks(refreshedBooks);
-    } else {
-      // Fallback: add the new book to the list locally if fetch failed
-      const bookWithImages = {
-        ...data,
-        coverImageUrl: data.coverImageUrl || fallbackCover,
-        endImageUrl: data.endImageUrl || endImage
-      };
-
-      setBooks((prev) => [bookWithImages, ...prev]);
-    }
-    setLoadingBooks(false);
+    
+    setGenerating(false);
   };
 
   return (

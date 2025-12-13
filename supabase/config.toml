@@ -2,3 +2,9 @@ project_id = "eqmbqypzyhxqxxkpnbzs"
 
 [functions.fetch-link-metadata]
 verify_jwt = false
+
+[functions.generate-book]
+verify_jwt = false
+
+[functions.generate-music]
+verify_jwt = false
