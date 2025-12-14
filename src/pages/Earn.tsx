@@ -105,8 +105,8 @@ const Earn = () => {
       toast({ title: "Not signed in", description: "Please log in first", variant: "destructive" });
       return;
     }
-    if (!prompt.trim()) {
-      toast({ title: "Prompt required", description: "Enter an idea for the book", variant: "destructive" });
+    if (!prompt.trim() || prompt.trim().length < 10) {
+      toast({ title: "Prompt too short", description: "Please describe your book idea in at least 10 characters", variant: "destructive" });
       return;
     }
     
