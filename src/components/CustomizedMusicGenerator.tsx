@@ -10,28 +10,33 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const genres = ["lofi", "electronic", "ambient", "classical", "hip-hop", "pop", "rock", "cinematic"];
+const genres = ["lofi", "electronic", "ambient", "classical", "hip-hop", "pop", "rock", "cinematic", "devotional", "instrumental"];
+const moods = ["happy", "sad", "energetic", "calm", "mysterious", "romantic", "intense", "peaceful"];
 
 const clampDuration = (value: number) => {
   if (isNaN(value)) return 10;
-  return Math.min(300, Math.max(10, value));
+  return Math.min(30, Math.max(5, value));
 };
 
 const CustomizedMusicGenerator = () => {
   const { toast } = useToast();
   const [prompt, setPrompt] = useState("");
-  const [duration, setDuration] = useState<number>(60);
+  const [duration, setDuration] = useState<number>(30);
   const [genre, setGenre] = useState<string>("lofi");
+  const [mood, setMood] = useState<string>("calm");
   const [loading, setLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [downloadName, setDownloadName] = useState<string>("sample.mp3");
   const [errorState, setErrorState] = useState<string | null>(null);
+  const [trackInfo, setTrackInfo] = useState<{ title?: string; description?: string } | null>(null);
 
   const handleGenerate = async () => {
     setErrorState(null);
+    setTrackInfo(null);
     const trimmedPrompt = prompt.trim();
-    if (!trimmedPrompt) {
-      toast({ title: "Prompt required", description: "Tell us what to generate.", variant: "destructive" });
+    
+    if (!trimmedPrompt || trimmedPrompt.length < 5) {
+      toast({ title: "Prompt too short", description: "Please describe the music you want (at least 5 characters).", variant: "destructive" });
       return;
     }
 
@@ -48,7 +53,12 @@ const CustomizedMusicGenerator = () => {
           "Content-Type": "application/json",
           ...(accessToken && { "Authorization": `Bearer ${accessToken}` }),
         },
-        body: JSON.stringify({ prompt: trimmedPrompt, duration: clampDuration(duration), genre }),
+        body: JSON.stringify({ 
+          prompt: trimmedPrompt, 
+          duration: clampDuration(duration), 
+          genre,
+          mood 
+        }),
       });
 
       const contentType = response.headers.get("content-type") || "";
@@ -83,6 +93,11 @@ const CustomizedMusicGenerator = () => {
           for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
           finalBlob = new Blob([array], { type: mime });
           finalExtension = mime.includes("wav") ? "wav" : "mp3";
+          
+          // Store track info
+          if (data.title || data.description) {
+            setTrackInfo({ title: data.title, description: data.description });
+          }
         } else {
           throw new Error("Invalid JSON response from server");
         }
@@ -94,8 +109,8 @@ const CustomizedMusicGenerator = () => {
       if (finalBlob) {
         const url = URL.createObjectURL(finalBlob);
         setAudioUrl(url);
-        setDownloadName(`generated-${genre}.${finalExtension}`);
-        toast({ title: "Music ready", description: "Enjoy your track!" });
+        setDownloadName(`${genre}-${mood}-track.${finalExtension}`);
+        toast({ title: "Music ready!", description: "Your track has been generated." });
       } else {
         throw new Error("No audio data received");
       }
@@ -170,13 +185,13 @@ const CustomizedMusicGenerator = () => {
           />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
-            <Label className="text-slate-200">Duration (10-300 seconds)</Label>
+            <Label className="text-slate-200">Duration (5-30 seconds)</Label>
             <Input
               type="number"
-              min={10}
-              max={300}
+              min={5}
+              max={30}
               value={duration}
               onChange={(e) => setDuration(clampDuration(Number(e.target.value)))}
               className="bg-slate-950 border-slate-800"
@@ -192,6 +207,21 @@ const CustomizedMusicGenerator = () => {
                 {genres.map((g) => (
                   <SelectItem key={g} value={g} className="capitalize">
                     {g}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-slate-200">Mood</Label>
+            <Select value={mood} onValueChange={setMood}>
+              <SelectTrigger className="bg-slate-950 border-slate-800 text-slate-100">
+                <SelectValue placeholder="Select mood" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-slate-800">
+                {moods.map((m) => (
+                  <SelectItem key={m} value={m} className="capitalize">
+                    {m}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -216,7 +246,13 @@ const CustomizedMusicGenerator = () => {
         </Button>
 
         {audioUrl && (
-          <div className="space-y-3 rounded-lg border border-slate-800 bg-slate-950 p-4">
+          <div className="space-y-3 rounded-lg border border-emerald-800/50 bg-slate-950 p-4">
+            {trackInfo && (
+              <div className="mb-3 pb-3 border-b border-slate-800">
+                {trackInfo.title && <p className="font-semibold text-slate-100">{trackInfo.title}</p>}
+                {trackInfo.description && <p className="text-xs text-slate-400 mt-1">{trackInfo.description}</p>}
+              </div>
+            )}
             <p className="text-sm text-slate-200">Preview</p>
             <audio controls src={audioUrl} className="w-full" onError={() => toast({ title: "Playback error", description: "The audio could not be played.", variant: "destructive" })} />
             <Button
