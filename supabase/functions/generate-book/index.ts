@@ -10,14 +10,14 @@ async function generateImage(prompt: string, apiKey: string): Promise<string | n
   try {
     console.log("Generating image for:", prompt.substring(0, 50) + "...");
     
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://ai-gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
+        model: "google/gemini-2.0-flash-exp-image-generation",
         messages: [
           {
             role: "user",
@@ -97,7 +97,7 @@ serve(async (req) => {
     console.log("Generating book for user:", user.id, "with prompt:", prompt);
 
     // Generate book content using Lovable AI
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch("https://ai-gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
