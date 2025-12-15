@@ -76,22 +76,22 @@ serve(async (req) => {
     }
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return new Response(
         JSON.stringify({ error: "Authorization required" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Client used only for auth verification
-    const supabaseAuthClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const token = authHeader.replace("Bearer", "").trim();
+
+    // Client used only for auth verification using the JWT from the header
+    const supabaseAuthClient = createClient(supabaseUrl, supabaseAnonKey);
 
     const {
       data: { user },
       error: authError,
-    } = await supabaseAuthClient.auth.getUser();
+    } = await supabaseAuthClient.auth.getUser(token);
 
     if (authError || !user) {
       console.error("Auth error in generate-book:", authError);
