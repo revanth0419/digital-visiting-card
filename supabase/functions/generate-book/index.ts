@@ -10,21 +10,21 @@ async function generateImage(prompt: string, apiKey: string): Promise<string | n
   try {
     console.log("Generating image for:", prompt.substring(0, 50) + "...");
     
-    const response = await fetch("https://ai-gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-exp-image-generation",
+        model: "google/gemini-2.5-flash-image",
         messages: [
           {
             role: "user",
-            content: prompt
-          }
+            content: prompt,
+          },
         ],
-        modalities: ["image", "text"]
+        modalities: ["image", "text"],
       }),
     });
 
@@ -116,7 +116,7 @@ serve(async (req) => {
     console.log("Generating book for user:", user.id, "with prompt:", prompt);
 
     // Generate book content using Lovable AI
-    const aiResponse = await fetch("https://ai-gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -127,28 +127,31 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a creative book writer. Generate a complete story book with 5-8 chapters based on the user's prompt.
-            
-            Return ONLY valid JSON with this structure:
-            {
-              "title": "Book Title",
-              "description": "A compelling book description (2-3 sentences)",
-              "genre": "Fiction/Fantasy/Mystery/Romance/Sci-Fi/etc",
-              "chapters": [
-                {
-                  "title": "Chapter 1: Introduction",
-                  "content": "The chapter content... (3-5 paragraphs per chapter)",
-                  "imagePrompt": "A description for an AI to generate an illustration for this chapter"
-                }
-              ]
-            }
-            
-            Make the story engaging, complete with a beginning, middle, and end. Each chapter should advance the plot meaningfully.`
+            content:
+              `You are a creative book writer. Generate a complete story book with 5-8 chapters based on the user's prompt.
+              
+              Return ONLY valid JSON with this structure:
+              {
+                "title": "Book Title",
+                "description": "A compelling book description (2-3 sentences)",
+                "genre": "Fiction/Fantasy/Mystery/Romance/Sci-Fi/etc",
+                "chapters": [
+                  {
+                    "title": "Chapter 1: Introduction",
+                    "content": "The chapter content... (3-5 paragraphs per chapter)",
+                    "imagePrompt": "A description for an AI to generate an illustration for this chapter"
+                  }
+                ]
+              }
+              
+              Make the story engaging, complete with a beginning, middle, and end. Each chapter should advance the plot meaningfully.`,
           },
           {
             role: "user",
-            content: `Create a book based on this idea: ${prompt}${title ? `. Title should be: ${title}` : ""}${description ? `. Theme: ${description}` : ""}`
-          }
+            content: `Create a book based on this idea: ${prompt}${
+              title ? `. Title should be: ${title}` : ""
+            }${description ? `. Theme: ${description}` : ""}`,
+          },
         ],
       }),
     });
