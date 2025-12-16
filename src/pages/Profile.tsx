@@ -21,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Profile = {
   id: string;
-  username: string;
+  username: string | null;
   display_name: string | null;
   bio: string | null;
   avatar_url: string | null;
@@ -30,7 +30,7 @@ type Profile = {
   profile_theme: string | null;
   background_url: string | null;
   background_type: string | null;
-  user_id?: string;
+  user_id?: string; // Optional since public_profiles doesn't have it
 };
 
 type Link = {
@@ -81,8 +81,9 @@ const Profile = () => {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUserId(user?.id || null);
 
+      // Use public_profiles view to avoid exposing user_id
       const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("*")
         .eq("username", username)
         .single();
@@ -94,22 +95,34 @@ const Profile = () => {
 
       setProfile(profileData);
 
-      if (user && profileData.user_id && profileData.user_id !== user.id) {
-        const { data: subscription } = await supabase
-          .from("subscriptions")
-          .select("*")
-          .eq("subscriber_id", user.id)
-          .eq("subscribed_to_id", profileData.user_id)
-          .maybeSingle();
-        setIsSubscribed(!!subscription);
-      }
+      // For subscriptions and books, we need to look up user_id via a separate secure query
+      // This keeps user_id out of public profile data while allowing authenticated features
+      if (user && profileData.id) {
+        // Get user_id for subscription check via authenticated query to profiles table
+        const { data: ownerData } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("id", profileData.id)
+          .single();
 
-      const { data: booksData } = await supabase
-        .from("books")
-        .select("*")
-        .eq("user_id", profileData.user_id)
-        .order("created_at", { ascending: false });
-      if (booksData) setBooks(booksData);
+        if (ownerData?.user_id && ownerData.user_id !== user.id) {
+          const { data: subscription } = await supabase
+            .from("subscriptions")
+            .select("*")
+            .eq("subscriber_id", user.id)
+            .eq("subscribed_to_id", ownerData.user_id)
+            .maybeSingle();
+          setIsSubscribed(!!subscription);
+
+          // Fetch books for this profile owner
+          const { data: booksData } = await supabase
+            .from("books")
+            .select("*")
+            .eq("user_id", ownerData.user_id)
+            .order("created_at", { ascending: false });
+          if (booksData) setBooks(booksData);
+        }
+      }
 
       // Generate signed URLs for avatar and background with longer expiry
       if (profileData.avatar_url) {
