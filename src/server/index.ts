@@ -1,12 +1,27 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import prisma from "../lib/prisma.ts";
 import { openai } from "./openaiClient.ts";
 import { access } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import os from "node:os";
+import { createClient } from "@supabase/supabase-js";
 
 const app = express();
+
+// Initialize Supabase client for auth verification
+const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Extend Express Request to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: { id: string; email?: string };
+    }
+  }
+}
 
 const staticOrigins = [
   "http://localhost:5173",
@@ -44,6 +59,47 @@ app.use(
 );
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
+// Authentication middleware - verifies Supabase JWT token
+const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing or invalid authorization header" });
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      console.error("[Auth] Token verification failed:", error?.message);
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+
+    req.user = { id: user.id, email: user.email };
+    next();
+  } catch (error: any) {
+    console.error("[Auth] Authentication error:", error?.message);
+    return res.status(401).json({ error: "Authentication failed" });
+  }
+};
+
+// Authorization middleware - verifies user owns the resource
+const requireOwnership = (userIdParam: string) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const resourceUserId = req.params[userIdParam] || req.body[userIdParam] || req.query[userIdParam];
+    
+    if (!req.user) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    if (resourceUserId && resourceUserId !== req.user.id) {
+      return res.status(403).json({ error: "You can only access your own resources" });
+    }
+
+    next();
+  };
+};
 
 const defaultProfileForUser = async (userId: string) => {
   const safeUsername = `user-${userId.slice(0, 8)}`;
@@ -180,7 +236,7 @@ app.get("/api/profiles/by-user/:userId", async (req, res) => {
   }
 });
 
-app.put("/api/profiles/:userId", async (req, res) => {
+app.put("/api/profiles/:userId", requireAuth, requireOwnership("userId"), async (req, res) => {
   const {
     display_name,
     bio,
@@ -193,13 +249,15 @@ app.put("/api/profiles/:userId", async (req, res) => {
     username,
   } = req.body;
   try {
-    const existing = await prisma.profile.findUnique({ where: { user_id: req.params.userId } });
-    const resolvedUsername = existing?.username || username || `user-${req.params.userId.slice(0, 8)}`;
+    // Use authenticated user's ID for security
+    const userId = req.user!.id;
+    const existing = await prisma.profile.findUnique({ where: { user_id: userId } });
+    const resolvedUsername = existing?.username || username || `user-${userId.slice(0, 8)}`;
 
     const profile = await prisma.profile.upsert({
-      where: { user_id: req.params.userId },
+      where: { user_id: userId },
       create: {
-        user_id: req.params.userId,
+        user_id: userId,
         username: resolvedUsername,
         display_name: display_name ?? null,
         bio: bio ?? null,
@@ -251,9 +309,15 @@ app.get("/api/links", async (req, res) => {
   }
 });
 
-app.post("/api/links", async (req, res) => {
+app.post("/api/links", requireAuth, async (req, res) => {
   const { profile_id, title, url, icon, image_url, price, order_index, is_shopping_link, show_in_links } = req.body;
   try {
+    // Verify user owns this profile
+    const profile = await prisma.profile.findUnique({ where: { id: profile_id } });
+    if (!profile || profile.user_id !== req.user!.id) {
+      return res.status(403).json({ error: "You can only add links to your own profile" });
+    }
+
     const linkClient = ensureModel<typeof prisma.link>(prisma, "link");
     const link = await linkClient.create({
       data: {
@@ -275,10 +339,21 @@ app.post("/api/links", async (req, res) => {
   }
 });
 
-app.delete("/api/links/:id", async (req, res) => {
+app.delete("/api/links/:id", requireAuth, async (req, res) => {
   try {
     const linkClient = ensureModel<typeof prisma.link>(prisma, "link");
-    const link = await linkClient.delete({ where: { id: req.params.id } });
+    
+    // Verify ownership before deleting
+    const link = await linkClient.findUnique({ 
+      where: { id: req.params.id },
+      include: { profile: true }
+    });
+    
+    if (!link || link.profile.user_id !== req.user!.id) {
+      return res.status(403).json({ error: "You can only delete your own links" });
+    }
+
+    await linkClient.delete({ where: { id: req.params.id } });
     res.json({ data: link, error: null });
   } catch (error: any) {
     console.error("Error deleting link:", error);
@@ -286,9 +361,21 @@ app.delete("/api/links/:id", async (req, res) => {
   }
 });
 
-app.put("/api/links/order", async (req, res) => {
+app.put("/api/links/order", requireAuth, async (req, res) => {
   const updates: { id: string; order_index: number }[] = req.body?.updates || [];
   try {
+    // Verify ownership of all links being updated
+    const linkIds = updates.map(u => u.id);
+    const links = await prisma.link.findMany({
+      where: { id: { in: linkIds } },
+      include: { profile: true }
+    });
+    
+    const unauthorized = links.some(link => link.profile.user_id !== req.user!.id);
+    if (unauthorized) {
+      return res.status(403).json({ error: "You can only reorder your own links" });
+    }
+
     await prisma.$transaction(
       updates.map((u) =>
         prisma.link.update({
@@ -321,9 +408,15 @@ app.get("/api/media", async (req, res) => {
   }
 });
 
-app.post("/api/media", async (req, res) => {
+app.post("/api/media", requireAuth, async (req, res) => {
   const { profile_id, type, url, title, description, order_index } = req.body;
   try {
+    // Verify user owns this profile
+    const profile = await prisma.profile.findUnique({ where: { id: profile_id } });
+    if (!profile || profile.user_id !== req.user!.id) {
+      return res.status(403).json({ error: "You can only add media to your own profile" });
+    }
+
     const mediaClient = ensureModel<typeof prisma.media>(prisma, "media");
     const media = await mediaClient.create({
       data: {
@@ -341,10 +434,21 @@ app.post("/api/media", async (req, res) => {
   }
 });
 
-app.delete("/api/media/:id", async (req, res) => {
+app.delete("/api/media/:id", requireAuth, async (req, res) => {
   try {
     const mediaClient = ensureModel<typeof prisma.media>(prisma, "media");
-    const media = await mediaClient.delete({ where: { id: req.params.id } });
+    
+    // Verify ownership before deleting
+    const media = await mediaClient.findUnique({ 
+      where: { id: req.params.id },
+      include: { profile: true }
+    });
+    
+    if (!media || media.profile.user_id !== req.user!.id) {
+      return res.status(403).json({ error: "You can only delete your own media" });
+    }
+
+    await mediaClient.delete({ where: { id: req.params.id } });
     res.json({ data: media, error: null });
   } catch (error) {
     console.error("Error deleting media:", error);
@@ -403,15 +507,18 @@ app.post("/api/generate-music", async (req, res) => {
   }
 });
 
-app.post("/api/books/generate", async (req, res) => {
+app.post("/api/books/generate", requireAuth, async (req, res) => {
   try {
     console.log("[books/generate] incoming body:", { ...req.body, coverImageData: req.body.coverImageData ? "present" : "missing" });
-    const { userId, prompt, title, description, coverImageData, endImageData } = req.body;
+    const { prompt, title, description, coverImageData, endImageData } = req.body;
+    
+    // Use authenticated user's ID for security
+    const userId = req.user!.id;
 
-    if (!userId || !prompt) {
+    if (!prompt) {
       return res.status(400).json({
         data: null,
-        error: "Missing userId or prompt"
+        error: "Missing prompt"
       });
     }
 
@@ -640,10 +747,17 @@ app.get("/api/books/public/:username", async (req, res) => {
   }
 });
 
-app.patch("/api/books/:id", async (req, res) => {
+app.patch("/api/books/:id", requireAuth, async (req, res) => {
   try {
     const { title, description } = req.body || {};
     const bookClient = ensureModel<any>(prisma, "book");
+    
+    // Verify ownership before updating
+    const existingBook = await bookClient.findUnique({ where: { id: req.params.id } });
+    if (!existingBook || existingBook.userId !== req.user!.id) {
+      return res.status(403).json({ error: "You can only update your own books" });
+    }
+
     const book = await bookClient.update({
       where: { id: req.params.id },
       data: {
@@ -694,11 +808,12 @@ app.get("/api/subscriptions", async (req, res) => {
   }
 });
 
-app.post("/api/subscriptions", async (req, res) => {
-  const { subscriber_id, subscribed_to_id } = req.body;
+app.post("/api/subscriptions", requireAuth, async (req, res) => {
+  const { subscribed_to_id } = req.body;
   try {
+    // Use authenticated user's ID as subscriber
     const subscription = await prisma.subscription.create({
-      data: { subscriber_id, subscribed_to_id },
+      data: { subscriber_id: req.user!.id, subscribed_to_id },
     });
     res.json({ data: subscription, error: null });
   } catch (error) {
@@ -706,14 +821,14 @@ app.post("/api/subscriptions", async (req, res) => {
   }
 });
 
-app.delete("/api/subscriptions", async (req, res) => {
-  const subscriberId = String(req.query.subscriberId || "");
+app.delete("/api/subscriptions", requireAuth, async (req, res) => {
   const subscribedToId = String(req.query.subscribedToId || "");
   try {
+    // Use authenticated user's ID as subscriber
     const subscription = await prisma.subscription.delete({
       where: {
         subscriber_id_subscribed_to_id: {
-          subscriber_id: subscriberId,
+          subscriber_id: req.user!.id,
           subscribed_to_id: subscribedToId,
         },
       },
@@ -725,14 +840,11 @@ app.delete("/api/subscriptions", async (req, res) => {
 });
 
 // Notifications
-app.get("/api/notifications", async (req, res) => {
-  const userId = String(req.query.userId || "");
+app.get("/api/notifications", requireAuth, async (req, res) => {
   try {
-    if (!userId) {
-      return res.json({ data: [], error: null });
-    }
+    // Use authenticated user's ID
     const notifications = await prisma.notification.findMany({
-      where: { user_id: userId || undefined },
+      where: { user_id: req.user!.id },
       orderBy: { created_at: "desc" },
       take: 10,
     });
@@ -743,8 +855,14 @@ app.get("/api/notifications", async (req, res) => {
   }
 });
 
-app.put("/api/notifications/:id/read", async (req, res) => {
+app.put("/api/notifications/:id/read", requireAuth, async (req, res) => {
   try {
+    // Verify ownership before updating
+    const existing = await prisma.notification.findUnique({ where: { id: req.params.id } });
+    if (!existing || existing.user_id !== req.user!.id) {
+      return res.status(403).json({ error: "You can only mark your own notifications as read" });
+    }
+
     const notification = await prisma.notification.update({
       where: { id: req.params.id },
       data: { read: true },
@@ -755,11 +873,11 @@ app.put("/api/notifications/:id/read", async (req, res) => {
   }
 });
 
-app.put("/api/notifications/read-all", async (req, res) => {
-  const userId = String(req.query.userId || "");
+app.put("/api/notifications/read-all", requireAuth, async (req, res) => {
   try {
+    // Use authenticated user's ID
     await prisma.notification.updateMany({
-      where: { user_id: userId, read: false },
+      where: { user_id: req.user!.id, read: false },
       data: { read: true },
     });
     res.json({ data: true, error: null });
@@ -768,8 +886,14 @@ app.put("/api/notifications/read-all", async (req, res) => {
   }
 });
 
-app.delete("/api/notifications/:id", async (req, res) => {
+app.delete("/api/notifications/:id", requireAuth, async (req, res) => {
   try {
+    // Verify ownership before deleting
+    const existing = await prisma.notification.findUnique({ where: { id: req.params.id } });
+    if (!existing || existing.user_id !== req.user!.id) {
+      return res.status(403).json({ error: "You can only delete your own notifications" });
+    }
+
     const notification = await prisma.notification.delete({ where: { id: req.params.id } });
     res.json({ data: notification, error: null });
   } catch (error) {
