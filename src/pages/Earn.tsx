@@ -237,7 +237,7 @@ const Earn = () => {
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="Crystal Link"
-                        className="bg-slate-950 border-slate-800"
+                        className="bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-500"
                       />
                     </div>
                     <div className="space-y-2">
@@ -246,7 +246,7 @@ const Earn = () => {
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="Add a short tagline or summary"
-                        className="bg-slate-950 border-slate-800"
+                        className="bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-500"
                       />
                     </div>
                   </div>
@@ -257,7 +257,7 @@ const Earn = () => {
                       onChange={(e) => setPrompt(e.target.value)}
                       rows={4}
                       placeholder="Describe the story you want to generate..."
-                      className="bg-slate-950 border-slate-800"
+                      className="bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-500"
                     />
                   </div>
 

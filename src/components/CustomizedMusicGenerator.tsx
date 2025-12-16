@@ -181,7 +181,7 @@ const CustomizedMusicGenerator = () => {
             onChange={(e) => setPrompt(e.target.value)}
             rows={3}
             placeholder="E.g. Relaxing night-time lofi with gentle rain ambience"
-            className="bg-slate-950 border-slate-800"
+            className="bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-500"
           />
         </div>
 
@@ -194,7 +194,7 @@ const CustomizedMusicGenerator = () => {
               max={30}
               value={duration}
               onChange={(e) => setDuration(clampDuration(Number(e.target.value)))}
-              className="bg-slate-950 border-slate-800"
+              className="bg-slate-950 border-slate-800 text-slate-100"
             />
           </div>
           <div className="space-y-2">
