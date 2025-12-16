@@ -37,7 +37,7 @@ async function generateImage(prompt: string, apiKey: string): Promise<string | n
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
+        model: "google/gemini-2.5-flash-image-preview",
         messages: [
           {
             role: "user",
@@ -49,7 +49,8 @@ async function generateImage(prompt: string, apiKey: string): Promise<string | n
     });
 
     if (!response.ok) {
-      console.error("Image generation failed:", response.status);
+      const errText = await response.text();
+      console.error("Image generation failed:", response.status, errText);
       return null;
     }
 
@@ -285,6 +286,19 @@ serve(async (req) => {
     }
 
     // Insert the book into the database
+    // Note: Large base64 images can cause issues, so we truncate if too large
+    const MAX_IMAGE_LENGTH = 500000; // 500KB limit for stored images
+    const safeCoverImage = coverImageUrl && coverImageUrl.length > MAX_IMAGE_LENGTH ? null : coverImageUrl;
+    const safeEndImage = endImageUrl && endImageUrl.length > MAX_IMAGE_LENGTH ? null : endImageUrl;
+    
+    console.log("Attempting database insert with:", {
+      user_id: user.id,
+      title: bookData.title || title || "Untitled Book",
+      coverImageLength: safeCoverImage?.length ?? 0,
+      endImageLength: safeEndImage?.length ?? 0,
+      pagesCount: pages.length,
+    });
+
     const { data: book, error: insertError } = await supabaseAdmin
       .from("books")
       .insert({
@@ -293,16 +307,17 @@ serve(async (req) => {
         description: bookData.description || description,
         content: JSON.stringify({ ...bookData, chapters: chaptersWithImages }),
         pages: pages,
-        cover_image_url: coverImageUrl,
-        end_image_url: endImageUrl,
+        cover_image_url: safeCoverImage,
+        end_image_url: safeEndImage,
       })
       .select()
       .single();
 
     if (insertError) {
       console.error("Database insert error:", insertError);
+      console.error("Insert error details:", JSON.stringify(insertError, null, 2));
       return new Response(
-        JSON.stringify({ error: "Failed to save book. Please try again." }),
+        JSON.stringify({ error: "Failed to save book: " + (insertError.message || "Unknown database error") }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

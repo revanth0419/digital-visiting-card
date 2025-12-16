@@ -95,33 +95,32 @@ const Profile = () => {
 
       setProfile(profileData);
 
-      // For subscriptions and books, we need to look up user_id via a separate secure query
-      // This keeps user_id out of public profile data while allowing authenticated features
-      if (user && profileData.id) {
-        // Get user_id for subscription check via authenticated query to profiles table
-        const { data: ownerData } = await supabase
-          .from("profiles")
-          .select("user_id")
-          .eq("id", profileData.id)
-          .single();
+      // Get user_id for the profile owner (needed for books and subscriptions)
+      const { data: ownerData } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("id", profileData.id)
+        .single();
 
-        if (ownerData?.user_id && ownerData.user_id !== user.id) {
-          const { data: subscription } = await supabase
-            .from("subscriptions")
-            .select("*")
-            .eq("subscriber_id", user.id)
-            .eq("subscribed_to_id", ownerData.user_id)
-            .maybeSingle();
-          setIsSubscribed(!!subscription);
+      // Always fetch books for this profile (public books are visible to everyone)
+      if (ownerData?.user_id) {
+        const { data: booksData } = await supabase
+          .from("books")
+          .select("*")
+          .eq("user_id", ownerData.user_id)
+          .order("created_at", { ascending: false });
+        if (booksData) setBooks(booksData);
+      }
 
-          // Fetch books for this profile owner
-          const { data: booksData } = await supabase
-            .from("books")
-            .select("*")
-            .eq("user_id", ownerData.user_id)
-            .order("created_at", { ascending: false });
-          if (booksData) setBooks(booksData);
-        }
+      // For subscriptions, we need to check if viewing someone else's profile
+      if (user && ownerData?.user_id && ownerData.user_id !== user.id) {
+        const { data: subscription } = await supabase
+          .from("subscriptions")
+          .select("*")
+          .eq("subscriber_id", user.id)
+          .eq("subscribed_to_id", ownerData.user_id)
+          .maybeSingle();
+        setIsSubscribed(!!subscription);
       }
 
       // Generate signed URLs for avatar and background with longer expiry
@@ -1035,28 +1034,111 @@ const Profile = () => {
             transition={{ duration: 0.3 }}
             className="space-y-4"
           >
-            <h3 className={`text-2xl font-bold ${getTextColor()}`}>Books</h3>
             {books.length === 0 ? (
               <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-12 text-center border border-white/20">
-                <p className={`${getTextColor()} opacity-60 text-lg`}>No books yet.</p>
+                <motion.div
+                  initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+                >
+                  <motion.div
+                    animate={{ 
+                      rotate: [0, -5, 5, -5, 0],
+                      scale: [1, 1.05, 1.05, 1.05, 1]
+                    }}
+                    transition={{ 
+                      duration: 2,
+                      ease: "easeInOut",
+                      times: [0, 0.2, 0.4, 0.6, 1],
+                      repeat: Infinity,
+                      repeatDelay: 3
+                    }}
+                    className="text-8xl mb-6 inline-block"
+                  >
+                    📚
+                  </motion.div>
+                  <h3 className={`text-2xl font-bold mb-3 ${getTextColor()}`}>No books yet</h3>
+                  <p className={`text-base ${getTextColor()} opacity-70 max-w-md mx-auto`}>
+                    This user hasn't created any books yet.
+                  </p>
+                </motion.div>
               </div>
             ) : (
-              <div className="space-y-3">
-                {books.map((book) => (
-                  <div key={book.id} className="p-4 border rounded-2xl bg-white/10 dark:bg-black/20 backdrop-blur">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className={`font-semibold text-lg ${getTextColor()}`}>{book.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {book.description || "No description"}
-                        </p>
+              <div className={`grid gap-6 ${layoutStyle === "grid" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+                <AnimatePresence>
+                  {books.map((book, index) => (
+                    <motion.a
+                      key={book.id}
+                      href={`/books/${book.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block group"
+                      initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -30, scale: 0.95 }}
+                      transition={{ 
+                        duration: 0.4, 
+                        delay: index * 0.08,
+                        ease: [0.23, 1, 0.32, 1]
+                      }}
+                      whileHover={{ y: -8, transition: { duration: 0.2 } }}
+                    >
+                      <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl overflow-hidden border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 relative group">
+                        <div 
+                          className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"
+                          style={{
+                            background: `linear-gradient(135deg, ${themeColor}80, transparent)`,
+                            filter: "blur(20px)",
+                            transform: "scale(1.05)"
+                          }}
+                        />
+                        
+                        <div className="p-0">
+                          {book.cover_image_url ? (
+                            <div className="relative overflow-hidden aspect-[3/4] max-h-48">
+                              <img 
+                                src={book.cover_image_url} 
+                                alt={book.title} 
+                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                loading="lazy"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <div className="absolute bottom-4 left-4">
+                                  <div 
+                                    className="w-10 h-10 rounded-xl backdrop-blur-sm flex items-center justify-center"
+                                    style={{ backgroundColor: `${themeColor}40` }}
+                                  >
+                                    <BookOpen className="w-5 h-5 text-white" />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div 
+                              className="aspect-[3/4] max-h-48 flex items-center justify-center"
+                              style={{ background: `linear-gradient(135deg, ${themeColor}40, ${themeColor}20)` }}
+                            >
+                              <BookOpen className="w-16 h-16" style={{ color: themeColor }} />
+                            </div>
+                          )}
+                          <div className="p-5">
+                            <h4 className={`font-bold text-lg ${getTextColor()} mb-2 line-clamp-2 group-hover:text-blue-300 transition-colors`}>
+                              {book.title}
+                            </h4>
+                            {book.description && (
+                              <p className={`text-sm ${getTextColor()} opacity-70 line-clamp-2`}>
+                                {book.description}
+                              </p>
+                            )}
+                            <p className="text-xs mt-3 opacity-50" style={{ color: themeColor }}>
+                              {book.created_at ? new Date(book.created_at).toLocaleDateString() : "Recently created"}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="mt-3 max-h-48 overflow-auto text-sm leading-6 whitespace-pre-wrap text-foreground/80">
-                      {book.content}
-                    </div>
-                  </div>
-                ))}
+                    </motion.a>
+                  ))}
+                </AnimatePresence>
               </div>
             )}
           </motion.div>

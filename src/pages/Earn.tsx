@@ -140,7 +140,12 @@ const Earn = () => {
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || "Failed to generate book");
+        console.error("[Earn] Book generation API error:", data);
+        throw new Error(data.error || `Failed to generate book (${response.status})`);
+      }
+      
+      if (!data.id) {
+        throw new Error("Book generated but no ID returned");
       }
       
       toast({ title: "Book generated successfully" });
