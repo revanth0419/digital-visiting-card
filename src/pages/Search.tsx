@@ -5,17 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
-import { Search as SearchIcon, UserPlus, UserCheck, ArrowLeft } from "lucide-react";
+import { Search as SearchIcon, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
 interface Profile {
   id: string;
-  username: string;
+  username: string | null;
   display_name: string | null;
   bio: string | null;
   avatar_url: string | null;
-  user_id: string;
+  user_id?: string; // Optional since public_profiles doesn't have it
   isSubscribed?: boolean;
 }
 
@@ -45,34 +45,25 @@ export default function Search() {
   const searchProfiles = async () => {
     setLoading(true);
     try {
-      // Search profiles using Supabase
+      // Search profiles using public_profiles view to avoid exposing user_id
       const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("*")
         .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
         .limit(20);
 
       if (profilesError) throw profilesError;
 
-      if (profilesData && currentUserId) {
-        // Get user's subscriptions
-        const { data: subscriptions } = await supabase
-          .from("subscriptions")
-          .select("subscribed_to_id")
-          .eq("subscriber_id", currentUserId);
-
-        const subscribedIds = new Set(subscriptions?.map(s => s.subscribed_to_id) || []);
-        
-        const profilesWithStatus = profilesData
-          .filter(p => p.user_id !== currentUserId)
-          .map(p => ({
-            ...p,
-            isSubscribed: subscribedIds.has(p.user_id)
-          }));
-
-        setProfiles(profilesWithStatus);
-      } else if (profilesData) {
-        setProfiles(profilesData);
+      if (profilesData) {
+        // For public search, we don't check subscriptions since we don't have user_id
+        // Filter out any null username entries
+        const validProfiles = profilesData.filter(p => p.username && p.id);
+        setProfiles(validProfiles.map(p => ({
+          ...p,
+          id: p.id!,
+          username: p.username,
+          isSubscribed: false
+        })));
       }
     } catch (error) {
       console.error("Error searching profiles:", error);
@@ -88,38 +79,9 @@ export default function Search() {
       return;
     }
 
-    try {
-      if (profile.isSubscribed) {
-        // Unsubscribe
-        const { error } = await supabase
-          .from("subscriptions")
-          .delete()
-          .eq("subscriber_id", currentUserId)
-          .eq("subscribed_to_id", profile.user_id);
-
-        if (error) throw error;
-        toast.success(`Unsubscribed from ${profile.display_name || profile.username}`);
-      } else {
-        // Subscribe
-        const { error } = await supabase
-          .from("subscriptions")
-          .insert({
-            subscriber_id: currentUserId,
-            subscribed_to_id: profile.user_id
-          });
-
-        if (error) throw error;
-        toast.success(`Subscribed to ${profile.display_name || profile.username}`);
-      }
-
-      // Update local state
-      setProfiles(profiles.map(p => 
-        p.id === profile.id ? { ...p, isSubscribed: !p.isSubscribed } : p
-      ));
-    } catch (error) {
-      console.error("Error toggling subscription:", error);
-      toast.error("Failed to update subscription");
-    }
+    // Since public_profiles doesn't have user_id, subscription via search is disabled
+    // Users can subscribe from the profile page directly
+    toast.error("Please visit the profile page to subscribe");
   };
 
   return (
@@ -180,7 +142,7 @@ export default function Search() {
                     >
                       <AvatarImage src={profile.avatar_url || undefined} />
                       <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-lg font-semibold">
-                        {(profile.display_name || profile.username).charAt(0).toUpperCase()}
+                        {(profile.display_name || profile.username || '?').charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
 
@@ -200,22 +162,12 @@ export default function Search() {
                     </div>
 
                     <Button
-                      variant={profile.isSubscribed ? "secondary" : "default"}
+                      variant="outline"
                       size="sm"
-                      onClick={() => handleSubscribe(profile)}
+                      onClick={() => navigate(`/u/${profile.username}`)}
                       className="min-w-[100px]"
                     >
-                      {profile.isSubscribed ? (
-                        <>
-                          <UserCheck className="w-4 h-4 mr-2" />
-                          Subscribed
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="w-4 h-4 mr-2" />
-                          Subscribe
-                        </>
-                      )}
+                      View Profile
                     </Button>
                   </div>
                 </Card>
