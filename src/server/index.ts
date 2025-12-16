@@ -6,6 +6,7 @@ import { access } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import os from "node:os";
 import { createClient } from "@supabase/supabase-js";
+import { createRateLimitMiddleware } from "./rateLimit.ts";
 
 const app = express();
 
@@ -458,56 +459,69 @@ app.delete("/api/media/:id", requireAuth, async (req, res) => {
 
 
 // Music
-app.post("/api/generate-music", async (req, res) => {
-  const { prompt, duration, genre } = req.body;
-  try {
-    // Generate a simple sine wave WAV file in memory
-    const sampleRate = 44100;
-    const numChannels = 1;
-    const bytesPerSample = 2;
-    const blockAlign = numChannels * bytesPerSample;
-    const byteRate = sampleRate * blockAlign;
-    const actualDuration = Math.min(30, Math.max(1, Number(duration) || 5));
-    const numSamples = sampleRate * actualDuration;
-    const dataSize = numSamples * blockAlign;
-    const bufferSize = 44 + dataSize;
+app.post(
+  "/api/generate-music",
+  createRateLimitMiddleware({ name: "generate_music", max: 30, windowMs: 60_000 }),
+  async (req, res) => {
+    const { prompt, duration, genre } = req.body;
+    try {
+      // Generate a simple sine wave WAV file in memory
+      const sampleRate = 44100;
+      const numChannels = 1;
+      const bytesPerSample = 2;
+      const blockAlign = numChannels * bytesPerSample;
+      const byteRate = sampleRate * blockAlign;
+      const actualDuration = Math.min(30, Math.max(1, Number(duration) || 5));
+      const numSamples = sampleRate * actualDuration;
+      const dataSize = numSamples * blockAlign;
+      const bufferSize = 44 + dataSize;
 
-    const buffer = Buffer.alloc(bufferSize);
+      const buffer = Buffer.alloc(bufferSize);
 
-    // RIFF header
-    buffer.write("RIFF", 0);
-    buffer.writeUInt32LE(bufferSize - 8, 4);
-    buffer.write("WAVE", 8);
-    buffer.write("fmt ", 12);
-    buffer.writeUInt32LE(16, 16);
-    buffer.writeUInt16LE(1, 20);
-    buffer.writeUInt16LE(numChannels, 22);
-    buffer.writeUInt32LE(sampleRate, 24);
-    buffer.writeUInt32LE(byteRate, 28);
-    buffer.writeUInt16LE(blockAlign, 32);
-    buffer.writeUInt16LE(16, 34);
-    buffer.write("data", 36);
-    buffer.writeUInt32LE(dataSize, 40);
+      // RIFF header
+      buffer.write("RIFF", 0);
+      buffer.writeUInt32LE(bufferSize - 8, 4);
+      buffer.write("WAVE", 8);
+      buffer.write("fmt ", 12);
+      buffer.writeUInt32LE(16, 16);
+      buffer.writeUInt16LE(1, 20);
+      buffer.writeUInt16LE(numChannels, 22);
+      buffer.writeUInt32LE(sampleRate, 24);
+      buffer.writeUInt32LE(byteRate, 28);
+      buffer.writeUInt16LE(blockAlign, 32);
+      buffer.writeUInt16LE(16, 34);
+      buffer.write("data", 36);
+      buffer.writeUInt32LE(dataSize, 40);
 
-    // Data
-    const freqBase = genre === 'lofi' ? 220 : genre === 'rock' ? 110 : 440;
-    for (let i = 0; i < numSamples; i++) {
-      const t = i / sampleRate;
-      const freq = freqBase * (1 + 0.5 * Math.sin(2 * Math.PI * 0.5 * t));
-      const sample = Math.sin(2 * Math.PI * freq * t) * 0.5;
-      const val = Math.max(-32768, Math.min(32767, sample * 32767));
-      buffer.writeInt16LE(Math.floor(val), 44 + i * 2);
+      // Data
+      const freqBase = genre === "lofi" ? 220 : genre === "rock" ? 110 : 440;
+      for (let i = 0; i < numSamples; i++) {
+        const t = i / sampleRate;
+        const freq = freqBase * (1 + 0.5 * Math.sin(2 * Math.PI * 0.5 * t));
+        const sample = Math.sin(2 * Math.PI * freq * t) * 0.5;
+        const val = Math.max(-32768, Math.min(32767, sample * 32767));
+        buffer.writeInt16LE(Math.floor(val), 44 + i * 2);
+      }
+
+      res.setHeader("Content-Type", "audio/wav");
+      res.send(buffer);
+    } catch (error: any) {
+      console.error("[Music] Error:", error);
+      res.status(500).json({ status: "error", message: error.message });
     }
-
-    res.setHeader("Content-Type", "audio/wav");
-    res.send(buffer);
-  } catch (error: any) {
-    console.error("[Music] Error:", error);
-    res.status(500).json({ status: "error", message: error.message });
   }
-});
+);
 
-app.post("/api/books/generate", requireAuth, async (req, res) => {
+app.post(
+  "/api/books/generate",
+  requireAuth,
+  createRateLimitMiddleware({
+    name: "books_generate",
+    max: 3,
+    windowMs: 10 * 60 * 1000,
+    keyFn: (req) => `user:${req.user?.id ?? "unknown"}`,
+  }),
+  async (req, res) => {
   try {
     console.log("[books/generate] incoming body:", { ...req.body, coverImageData: req.body.coverImageData ? "present" : "missing" });
     const { prompt, title, description, coverImageData, endImageData } = req.body;
