@@ -10,7 +10,7 @@ import { Loader2, BookOpen, ExternalLink, Link as LinkIcon, Music4, ShoppingBag 
 import BookReader from "@/components/books/BookReader";
 import FallbackCover from "@/components/books/FallbackCover";
 import Marketplace from "@/components/Marketplace";
-import CustomizedMusicGenerator from "@/components/CustomizedMusicGenerator";
+import SunoMusicGenerator from "@/components/SunoMusicGenerator";
 import EarnImagePicker from "@/components/EarnImagePicker";
 
 type Book = {
@@ -409,7 +409,7 @@ const Earn = () => {
 
           {activePanel === "marketplace" && <Marketplace />}
 
-          {activePanel === "music" && <CustomizedMusicGenerator />}
+          {activePanel === "music" && <SunoMusicGenerator />}
         </div>
       </div>
 
