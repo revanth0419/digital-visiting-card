@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.generate-music]
 verify_jwt = false
+
+[functions.generate-suno-music]
+verify_jwt = false

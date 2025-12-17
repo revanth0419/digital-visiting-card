@@ -25,14 +25,14 @@ const Index = () => {
             Your personalized link hub with style. Share all your important links in one beautiful place.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
-            <Link to="/auth">
+            <Link to="/auth?mode=signup">
               <Button size="lg" variant="gradient" className="text-base md:text-lg px-6 md:px-8 w-full sm:w-auto hover-scale">
                 Get Started Free
               </Button>
             </Link>
-            <Link to="/auth">
+            <Link to="/auth?mode=login">
               <Button size="lg" variant="outline" className="text-base md:text-lg px-6 md:px-8 w-full sm:w-auto hover-scale">
-                Sign In
+                Login
               </Button>
             </Link>
           </div>
@@ -98,7 +98,7 @@ const Index = () => {
             <p className="text-lg text-muted-foreground mb-6">
               Create your free profile in seconds. No credit card required.
             </p>
-            <Link to="/auth">
+            <Link to="/auth?mode=signup">
               <Button size="lg" variant="gradient" className="text-lg px-8">
                 Create Your Profile
               </Button>

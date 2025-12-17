@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,19 +14,26 @@ import AnimatedCharacter from "@/components/auth/AnimatedCharacter";
 type Expression = "neutral" | "happy" | "sad" | "shocked";
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [searchParams] = useSearchParams();
+  const initialMode = searchParams.get("mode");
+  
+  // Default to signup if mode=signup, otherwise login
+  const [isLogin, setIsLogin] = useState(initialMode !== "signup");
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [expression, setExpression] = useState<Expression>("neutral");
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const [isTypingPassword, setIsTypingPassword] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -39,13 +46,52 @@ const Auth = () => {
   }, []);
 
   useEffect(() => {
-    // Check if already logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/dashboard");
+    // Check if already logged in - but only redirect if session is valid
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Session check error:", error);
+          // Clear any stale session data
+          await supabase.auth.signOut();
+          setCheckingSession(false);
+          return;
+        }
+        
+        if (session?.user && session?.access_token) {
+          // Verify the session is still valid by making a test request
+          const { error: userError } = await supabase.auth.getUser();
+          
+          if (userError) {
+            console.error("User verification failed:", userError);
+            await supabase.auth.signOut();
+            setCheckingSession(false);
+            return;
+          }
+          
+          // Valid session - redirect to dashboard
+          navigate("/dashboard");
+        } else {
+          setCheckingSession(false);
+        }
+      } catch (err) {
+        console.error("Session check failed:", err);
+        setCheckingSession(false);
       }
-    });
+    };
+    
+    checkSession();
   }, [navigate]);
+
+  // Update isLogin when URL changes
+  useEffect(() => {
+    if (initialMode === "signup") {
+      setIsLogin(false);
+    } else if (initialMode === "login") {
+      setIsLogin(true);
+    }
+  }, [initialMode]);
 
   const validateEmail = (email: string) => {
     return email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
@@ -103,6 +149,16 @@ const Auth = () => {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate that fields are not empty
+    if (!email.trim() || !password.trim()) {
+      toast({
+        title: "Missing credentials",
+        description: "Please enter both email and password.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Check rate limiting
     if (lockoutUntil && Date.now() < lockoutUntil) {
       const minutesLeft = Math.ceil((lockoutUntil - Date.now()) / 60000);
@@ -138,14 +194,28 @@ const Auth = () => {
       return;
     }
 
-    if (!isLogin && !validateUsername(username)) {
-      toast({
-        title: "Invalid username",
-        description: "Username must be 3-30 characters and contain only letters, numbers, hyphens, and underscores.",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
+    // Signup-specific validations
+    if (!isLogin) {
+      if (!validateUsername(username)) {
+        toast({
+          title: "Invalid username",
+          description: "Username must be 3-30 characters and contain only letters, numbers, hyphens, and underscores.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+      
+      // Confirm password validation
+      if (password !== confirmPassword) {
+        toast({
+          title: "Passwords don't match",
+          description: "Please make sure your passwords match.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
     }
 
     try {
@@ -235,13 +305,10 @@ const Auth = () => {
           setExpression("happy");
           toast({
             title: "✅ Signup successful!",
-            description: "Please check your email and verify your account before logging in.",
+            description: "You can now log in with your credentials.",
           });
-          setTimeout(() => {
-            setIsLogin(true);
-            setPassword("");
-            setExpression("neutral");
-          }, 1500);
+          // Redirect to dashboard after successful signup
+          setTimeout(() => navigate("/dashboard"), 800);
         }
       }
     } catch (error: any) {
@@ -254,6 +321,15 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  // Show loading state while checking session
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen gradient-mesh flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen gradient-mesh flex items-center justify-center p-4 relative overflow-hidden">
@@ -319,7 +395,7 @@ const Auth = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={isForgotPassword ? handleForgotPassword : handleAuth} className="space-y-4">
-              {!isLogin && (
+              {!isLogin && !isForgotPassword && (
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="username">Username *</Label>
@@ -356,43 +432,80 @@ const Auth = () => {
                 />
               </div>
               {!isForgotPassword && (
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      onFocus={() => setIsTypingPassword(true)}
-                      onBlur={() => setIsTypingPassword(false)}
-                      placeholder="••••••••"
-                      required
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      tabIndex={-1}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        onFocus={() => setIsTypingPassword(true)}
+                        onBlur={() => setIsTypingPassword(false)}
+                        placeholder="••••••••"
+                        required
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                    {isLogin && (
+                      <button
+                        type="button"
+                        onClick={() => setIsForgotPassword(true)}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Forgot password?
+                      </button>
+                    )}
                   </div>
-                  {isLogin && (
-                    <button
-                      type="button"
-                      onClick={() => setIsForgotPassword(true)}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      Forgot password?
-                    </button>
+                  
+                  {/* Confirm Password for Signup */}
+                  {!isLogin && (
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          onFocus={() => setIsTypingPassword(true)}
+                          onBlur={() => setIsTypingPassword(false)}
+                          placeholder="••••••••"
+                          required
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          tabIndex={-1}
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                      {password && confirmPassword && password !== confirmPassword && (
+                        <p className="text-xs text-destructive">Passwords don't match</p>
+                      )}
+                    </div>
                   )}
-                </div>
+                </>
               )}
               <Button
                 type="submit"
@@ -422,6 +535,7 @@ const Auth = () => {
                   onClick={() => {
                     setIsLogin(!isLogin);
                     setPassword("");
+                    setConfirmPassword("");
                   }}
                   className="text-sm text-primary hover:underline"
                 >
