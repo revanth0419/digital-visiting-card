@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Music4, Download, Wand2, PlayCircle, AlertCircle, 
-  RefreshCw, Share2, Volume2, VolumeX, Loader2 
+  RefreshCw, Share2, Volume2, VolumeX, Loader2, Eye, EyeOff, Trash2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,21 @@ const languages = [
 
 type LoadingStage = "idle" | "writing" | "composing" | "recording" | "done";
 
+type MusicTrack = {
+  id: string;
+  title: string;
+  prompt: string | null;
+  genre: string | null;
+  mood: string | null;
+  language: string | null;
+  has_vocals: boolean;
+  lyrics: string | null;
+  audio_url: string | null;
+  cover_image_url: string | null;
+  show_on_profile: boolean;
+  created_at: string;
+};
+
 const SunoMusicGenerator = () => {
   const { toast } = useToast();
   const [prompt, setPrompt] = useState("");
@@ -66,6 +81,38 @@ const SunoMusicGenerator = () => {
   const [songTitle, setSongTitle] = useState<string | null>(null);
   const [lyrics, setLyrics] = useState<string | null>(null);
   const [coverImage, setCoverImage] = useState<string | null>(null);
+  
+  // Saved tracks
+  const [savedTracks, setSavedTracks] = useState<MusicTrack[]>([]);
+  const [loadingTracks, setLoadingTracks] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadUserAndTracks = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+      if (user?.id) {
+        loadSavedTracks(user.id);
+      }
+    };
+    loadUserAndTracks();
+  }, []);
+
+  const loadSavedTracks = async (uid: string) => {
+    setLoadingTracks(true);
+    const { data, error } = await supabase
+      .from("music_tracks")
+      .select("*")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: false });
+    
+    if (error) {
+      console.error("Error loading tracks:", error);
+    } else if (data) {
+      setSavedTracks(data as MusicTrack[]);
+    }
+    setLoadingTracks(false);
+  };
 
   const buildSunoPrompt = () => {
     if (vocalsEnabled) {
@@ -111,7 +158,6 @@ Duration: 1–2 minutes.`;
       return;
     }
 
-    // Check if user is logged in
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session) {
       toast({ 
@@ -128,7 +174,6 @@ Duration: 1–2 minutes.`;
     setLyrics(null);
     setCoverImage(null);
 
-    // Start loading stage simulation
     simulateLoadingStages();
 
     try {
@@ -179,6 +224,8 @@ Duration: 1–2 minutes.`;
         throw new Error(data.message || "Generation failed");
       }
 
+      let generatedAudioUrl: string | null = null;
+
       // Handle audio
       if (data.audioBase64) {
         const mime = data.mime || "audio/mpeg";
@@ -188,14 +235,41 @@ Duration: 1–2 minutes.`;
         const blob = new Blob([array], { type: mime });
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
+        generatedAudioUrl = url;
       } else if (data.audio_url) {
         setAudioUrl(data.audio_url);
+        generatedAudioUrl = data.audio_url;
       }
 
-      // Set metadata
-      setSongTitle(data.title || `${genre.charAt(0).toUpperCase() + genre.slice(1)} ${mood} Track`);
+      const generatedTitle = data.title || `${genre.charAt(0).toUpperCase() + genre.slice(1)} ${mood} Track`;
+      setSongTitle(generatedTitle);
       setLyrics(data.lyrics || null);
       setCoverImage(data.image_url || data.coverImage || null);
+
+      // Save to database
+      const { data: savedTrack, error: saveError } = await supabase
+        .from("music_tracks")
+        .insert({
+          user_id: sessionData.session.user.id,
+          title: generatedTitle,
+          prompt: trimmedPrompt,
+          genre,
+          mood,
+          language,
+          has_vocals: vocalsEnabled,
+          lyrics: data.lyrics || null,
+          audio_url: generatedAudioUrl,
+          cover_image_url: data.image_url || data.coverImage || null,
+          show_on_profile: true,
+        })
+        .select()
+        .single();
+
+      if (saveError) {
+        console.error("Error saving track:", saveError);
+      } else if (savedTrack) {
+        setSavedTracks(prev => [savedTrack as MusicTrack, ...prev]);
+      }
 
       setLoadingStage("done");
       toast({ title: "Song generated!", description: "Your track is ready to play." });
@@ -230,7 +304,6 @@ Duration: 1–2 minutes.`;
         url: window.location.href,
       });
     } catch {
-      // Fallback: copy to clipboard
       navigator.clipboard.writeText(window.location.href);
       toast({ title: "Link copied!", description: "Share link copied to clipboard." });
     }
@@ -243,6 +316,36 @@ Duration: 1–2 minutes.`;
     setCoverImage(null);
     setLoadingStage("idle");
     handleGenerate();
+  };
+
+  const toggleTrackVisibility = async (trackId: string, currentVisibility: boolean) => {
+    const { error } = await supabase
+      .from("music_tracks")
+      .update({ show_on_profile: !currentVisibility })
+      .eq("id", trackId);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to update visibility", variant: "destructive" });
+    } else {
+      setSavedTracks(prev => 
+        prev.map(t => t.id === trackId ? { ...t, show_on_profile: !currentVisibility } : t)
+      );
+      toast({ title: currentVisibility ? "Hidden from profile" : "Visible on profile" });
+    }
+  };
+
+  const deleteTrack = async (trackId: string) => {
+    const { error } = await supabase
+      .from("music_tracks")
+      .delete()
+      .eq("id", trackId);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to delete track", variant: "destructive" });
+    } else {
+      setSavedTracks(prev => prev.filter(t => t.id !== trackId));
+      toast({ title: "Track deleted" });
+    }
   };
 
   const getLoadingMessage = () => {
@@ -276,256 +379,332 @@ Duration: 1–2 minutes.`;
   }
 
   return (
-    <Card className="bg-slate-900 border-slate-800">
-      <CardHeader className="flex flex-row items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-xs text-slate-400">AI Music Generator</p>
-          <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
-            <Music4 className="w-5 h-5 text-purple-400" />
-            Suno-Style Music Creator
-          </CardTitle>
-          <p className="text-sm text-slate-400">
-            Create professional AI-generated songs with vocals or instrumentals
-          </p>
-        </div>
-        <PlayCircle className="w-8 h-8 text-purple-400/80" />
-      </CardHeader>
+    <div className="space-y-6">
+      <Card className="bg-slate-900 border-slate-800">
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-xs text-slate-400">AI Music Generator</p>
+            <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
+              <Music4 className="w-5 h-5 text-purple-400" />
+              Suno-Style Music Creator
+            </CardTitle>
+            <p className="text-sm text-slate-400">
+              Create professional AI-generated songs with vocals or instrumentals
+            </p>
+          </div>
+          <PlayCircle className="w-8 h-8 text-purple-400/80" />
+        </CardHeader>
 
-      <CardContent className="space-y-5">
-        {/* Prompt Input */}
-        <div className="space-y-2">
-          <Label className="text-slate-200">Describe your song</Label>
-          <Textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            rows={3}
-            placeholder="E.g. A summer love story about meeting someone at the beach..."
-            className="bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-500 resize-none"
-            disabled={loading}
-          />
-        </div>
-
-        {/* Options Grid */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <CardContent className="space-y-5">
+          {/* Prompt Input */}
           <div className="space-y-2">
-            <Label className="text-slate-200">Genre</Label>
-            <Select value={genre} onValueChange={setGenre} disabled={loading}>
-              <SelectTrigger className="bg-slate-950 border-slate-800 text-slate-100">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-800">
-                {genres.map((g) => (
-                  <SelectItem key={g.value} value={g.value}>
-                    {g.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label className="text-slate-200">Describe your song</Label>
+            <Textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={3}
+              placeholder="E.g. A summer love story about meeting someone at the beach..."
+              className="bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-500 resize-none"
+              disabled={loading}
+            />
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-slate-200">Mood</Label>
-            <Select value={mood} onValueChange={setMood} disabled={loading}>
-              <SelectTrigger className="bg-slate-950 border-slate-800 text-slate-100">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-800">
-                {moods.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Options Grid */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label className="text-slate-200">Genre</Label>
+              <Select value={genre} onValueChange={setGenre} disabled={loading}>
+                <SelectTrigger className="bg-slate-950 border-slate-800 text-slate-100">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-800">
+                  {genres.map((g) => (
+                    <SelectItem key={g.value} value={g.value}>
+                      {g.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-2">
-            <Label className="text-slate-200">Language</Label>
-            <Select value={language} onValueChange={setLanguage} disabled={loading}>
-              <SelectTrigger className="bg-slate-950 border-slate-800 text-slate-100">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-800">
-                {languages.map((l) => (
-                  <SelectItem key={l.value} value={l.value}>
-                    {l.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+            <div className="space-y-2">
+              <Label className="text-slate-200">Mood</Label>
+              <Select value={mood} onValueChange={setMood} disabled={loading}>
+                <SelectTrigger className="bg-slate-950 border-slate-800 text-slate-100">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-800">
+                  {moods.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* Vocals Toggle */}
-        <div className="flex items-center justify-between p-4 bg-slate-950 rounded-lg border border-slate-800">
-          <div className="flex items-center gap-3">
-            {vocalsEnabled ? (
-              <Volume2 className="w-5 h-5 text-purple-400" />
-            ) : (
-              <VolumeX className="w-5 h-5 text-slate-500" />
-            )}
-            <div>
-              <p className="text-sm font-medium text-slate-200">Vocals</p>
-              <p className="text-xs text-slate-400">
-                {vocalsEnabled ? "Include AI-generated singing" : "Instrumental only"}
-              </p>
+            <div className="space-y-2">
+              <Label className="text-slate-200">Language</Label>
+              <Select value={language} onValueChange={setLanguage} disabled={loading}>
+                <SelectTrigger className="bg-slate-950 border-slate-800 text-slate-100">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-800">
+                  {languages.map((l) => (
+                    <SelectItem key={l.value} value={l.value}>
+                      {l.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          <Switch
-            checked={vocalsEnabled}
-            onCheckedChange={setVocalsEnabled}
+
+          {/* Vocals Toggle */}
+          <div className="flex items-center justify-between p-4 bg-slate-950 rounded-lg border border-slate-800">
+            <div className="flex items-center gap-3">
+              {vocalsEnabled ? (
+                <Volume2 className="w-5 h-5 text-purple-400" />
+              ) : (
+                <VolumeX className="w-5 h-5 text-slate-500" />
+              )}
+              <div>
+                <p className="text-sm font-medium text-slate-200">Vocals</p>
+                <p className="text-xs text-slate-400">
+                  {vocalsEnabled ? "Include AI-generated singing" : "Instrumental only"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={vocalsEnabled}
+              onCheckedChange={setVocalsEnabled}
+              disabled={loading}
+            />
+          </div>
+
+          {/* Generate Button */}
+          <Button
+            onClick={handleGenerate}
             disabled={loading}
-          />
-        </div>
-
-        {/* Generate Button */}
-        <Button
-          onClick={handleGenerate}
-          disabled={loading}
-          className="w-full bg-purple-600 text-white hover:bg-purple-500 gap-2 h-12"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              {getLoadingMessage()}
-            </>
-          ) : (
-            <>
-              <Wand2 className="w-5 h-5" />
-              Generate Song
-            </>
-          )}
-        </Button>
-
-        {/* Loading Progress */}
-        <AnimatePresence>
-          {loading && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="space-y-2"
-            >
-              <div className="flex gap-2">
-                {["writing", "composing", "recording"].map((stage, i) => {
-                  const stages = ["writing", "composing", "recording"];
-                  const currentIndex = stages.indexOf(loadingStage);
-                  const isActive = i <= currentIndex;
-                  const isCurrent = stage === loadingStage;
-                  
-                  if (!vocalsEnabled && stage === "writing") return null;
-                  if (!vocalsEnabled && stage === "recording") return null;
-                  
-                  return (
-                    <div
-                      key={stage}
-                      className={`flex-1 h-1.5 rounded-full transition-all ${
-                        isActive 
-                          ? isCurrent 
-                            ? "bg-purple-500 animate-pulse" 
-                            : "bg-purple-600"
-                          : "bg-slate-800"
-                      }`}
-                    />
-                  );
-                })}
-              </div>
-              <p className="text-xs text-center text-slate-400">
+            className="w-full bg-purple-600 text-white hover:bg-purple-500 gap-2 h-12"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
                 {getLoadingMessage()}
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </>
+            ) : (
+              <>
+                <Wand2 className="w-5 h-5" />
+                Generate Song
+              </>
+            )}
+          </Button>
 
-        {/* Output Section */}
-        <AnimatePresence>
-          {audioUrl && !loading && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="space-y-4 rounded-lg border border-purple-800/50 bg-slate-950 p-4"
-            >
-              {/* Cover & Title */}
-              <div className="flex gap-4">
-                {coverImage && (
-                  <img 
-                    src={coverImage} 
-                    alt={songTitle || "Song cover"} 
-                    className="w-20 h-20 rounded-lg object-cover"
-                  />
-                )}
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg text-slate-100">
-                    {songTitle}
-                  </h3>
-                  <p className="text-sm text-slate-400">
-                    {genre.charAt(0).toUpperCase() + genre.slice(1)} • {mood} • {language}
-                  </p>
-                  {!vocalsEnabled && (
-                    <span className="inline-block mt-1 text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
-                      Instrumental
-                    </span>
-                  )}
+          {/* Loading Progress */}
+          <AnimatePresence>
+            {loading && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-2"
+              >
+                <div className="flex gap-2">
+                  {["writing", "composing", "recording"].map((stage, i) => {
+                    const stages = ["writing", "composing", "recording"];
+                    const currentIndex = stages.indexOf(loadingStage);
+                    const isActive = i <= currentIndex;
+                    const isCurrent = stage === loadingStage;
+                    
+                    if (!vocalsEnabled && stage === "writing") return null;
+                    if (!vocalsEnabled && stage === "recording") return null;
+                    
+                    return (
+                      <div
+                        key={stage}
+                        className={`flex-1 h-1.5 rounded-full transition-all ${
+                          isActive 
+                            ? isCurrent 
+                              ? "bg-purple-500 animate-pulse" 
+                              : "bg-purple-600"
+                            : "bg-slate-800"
+                        }`}
+                      />
+                    );
+                  })}
                 </div>
-              </div>
+                <p className="text-xs text-center text-slate-400">
+                  {getLoadingMessage()}
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-              {/* Audio Player */}
-              <audio 
-                controls 
-                src={audioUrl} 
-                className="w-full" 
-                onError={() => toast({ 
-                  title: "Playback error", 
-                  description: "The audio could not be played.", 
-                  variant: "destructive" 
-                })} 
-              />
-
-              {/* Lyrics Section */}
-              {lyrics && (
-                <div className="space-y-2">
-                  <Label className="text-slate-200">Lyrics</Label>
-                  <div className="max-h-48 overflow-y-auto p-3 bg-slate-900 rounded-lg border border-slate-800">
-                    <pre className="text-sm text-slate-300 whitespace-pre-wrap font-sans">
-                      {lyrics}
-                    </pre>
+          {/* Output Section - Generated Music */}
+          <AnimatePresence>
+            {audioUrl && !loading && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-4 rounded-lg border border-purple-800/50 bg-slate-950 p-4"
+              >
+                {/* Cover & Title */}
+                <div className="flex gap-4">
+                  {coverImage && (
+                    <img 
+                      src={coverImage} 
+                      alt={songTitle || "Song cover"} 
+                      className="w-20 h-20 rounded-lg object-cover"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg text-slate-100">
+                      {songTitle}
+                    </h3>
+                    <p className="text-sm text-slate-400">
+                      {genre.charAt(0).toUpperCase() + genre.slice(1)} • {mood} • {language}
+                    </p>
+                    {!vocalsEnabled && (
+                      <span className="inline-block mt-1 text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
+                        Instrumental
+                      </span>
+                    )}
                   </div>
                 </div>
-              )}
 
-              {/* Action Buttons */}
-              <div className="grid grid-cols-3 gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleDownload}
-                  className="border-slate-700 text-slate-100 hover:bg-slate-800 gap-2"
+                {/* Audio Player */}
+                <audio 
+                  controls 
+                  src={audioUrl} 
+                  className="w-full" 
+                  onError={() => toast({ 
+                    title: "Playback error", 
+                    description: "The audio could not be played.", 
+                    variant: "destructive" 
+                  })} 
+                />
+
+                {/* Lyrics Section */}
+                {lyrics && (
+                  <div className="space-y-2">
+                    <Label className="text-slate-200">Lyrics</Label>
+                    <div className="max-h-48 overflow-y-auto p-3 bg-slate-900 rounded-lg border border-slate-800">
+                      <pre className="text-sm text-slate-300 whitespace-pre-wrap font-sans">
+                        {lyrics}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleDownload}
+                    className="border-slate-700 text-slate-100 hover:bg-slate-900 gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleRegenerate}
+                    className="border-slate-700 text-slate-100 hover:bg-slate-900 gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Regenerate
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleShare}
+                    className="border-slate-700 text-slate-100 hover:bg-slate-900 gap-2"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </CardContent>
+      </Card>
+
+      {/* Saved Tracks Section */}
+      <Card className="bg-slate-900 border-slate-800">
+        <CardHeader>
+          <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
+            <Music4 className="w-5 h-5 text-purple-400" />
+            Your Music Tracks
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {loadingTracks ? (
+            <div className="text-slate-400 text-sm">Loading...</div>
+          ) : savedTracks.length === 0 ? (
+            <div className="text-slate-400 text-sm">No tracks yet. Generate your first song!</div>
+          ) : (
+            <div className="space-y-3">
+              {savedTracks.map((track) => (
+                <div
+                  key={track.id}
+                  className="p-4 rounded-lg border border-slate-800 bg-slate-950"
                 >
-                  <Download className="w-4 h-4" />
-                  Download
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleRegenerate}
-                  className="border-slate-700 text-slate-100 hover:bg-slate-800 gap-2"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Regenerate
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleShare}
-                  className="border-slate-700 text-slate-100 hover:bg-slate-800 gap-2"
-                >
-                  <Share2 className="w-4 h-4" />
-                  Share
-                </Button>
-              </div>
-            </motion.div>
+                  <div className="flex items-start gap-3">
+                    {track.cover_image_url ? (
+                      <img
+                        src={track.cover_image_url}
+                        alt={track.title}
+                        className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-lg bg-purple-900/30 flex items-center justify-center flex-shrink-0">
+                        <Music4 className="w-6 h-6 text-purple-400" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-slate-100 line-clamp-1">{track.title}</p>
+                      <p className="text-xs text-slate-500">
+                        {track.genre} • {track.mood} • {track.has_vocals ? "With Vocals" : "Instrumental"}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1 line-clamp-1">{track.prompt}</p>
+                      
+                      {track.audio_url && (
+                        <audio controls src={track.audio_url} className="w-full mt-2 h-8" />
+                      )}
+                      
+                      <div className="flex items-center gap-2 mt-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleTrackVisibility(track.id, track.show_on_profile)}
+                          className={`h-7 px-2 ${track.show_on_profile ? 'text-green-400' : 'text-slate-500'}`}
+                        >
+                          {track.show_on_profile ? (
+                            <><Eye className="w-3 h-3 mr-1" /> On Profile</>
+                          ) : (
+                            <><EyeOff className="w-3 h-3 mr-1" /> Hidden</>
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteTrack(track.id)}
+                          className="h-7 px-2 text-red-400 hover:text-red-300"
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" /> Delete
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
-        </AnimatePresence>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

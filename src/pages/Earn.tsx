@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, BookOpen, ExternalLink, Link as LinkIcon, Music4, ShoppingBag } from "lucide-react";
+import { Loader2, BookOpen, ExternalLink, Link as LinkIcon, Music4, ShoppingBag, Eye, EyeOff } from "lucide-react";
 import BookReader from "@/components/books/BookReader";
 import FallbackCover from "@/components/books/FallbackCover";
 import Marketplace from "@/components/Marketplace";
@@ -22,6 +22,7 @@ type Book = {
   coverImageUrl?: string | null;
   endImageUrl?: string | null;
   createdAt?: string;
+  show_on_profile?: boolean;
 };
 
 type PanelKey = "book" | "marketplace" | "music" | null;
@@ -69,6 +70,7 @@ const Earn = () => {
           coverImageUrl: book.cover_image_url,
           endImageUrl: book.end_image_url,
           createdAt: book.created_at,
+          show_on_profile: (book as any).show_on_profile ?? true,
         })));
       }
       setLoadingBooks(false);
@@ -347,13 +349,34 @@ const Earn = () => {
                               <p className="text-xs text-slate-400 line-clamp-2">
                                 {book.description || "No description"}
                               </p>
-                              <div className="flex items-center justify-between mt-2">
+                                <div className="flex items-center justify-between mt-2">
                                 {book.pages && Array.isArray(book.pages) && (
                                   <p className="text-xs text-slate-500">
                                     {book.pages.filter(p => !String(p).includes("type")).length || book.pages.length} pages
                                   </p>
                                 )}
                                 <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={`h-7 w-7 ${book.show_on_profile ? 'text-green-400' : 'text-slate-500'}`}
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      const { error } = await supabase
+                                        .from("books")
+                                        .update({ show_on_profile: !book.show_on_profile })
+                                        .eq("id", book.id);
+                                      if (!error) {
+                                        setBooks(prev => prev.map(b => 
+                                          b.id === book.id ? { ...b, show_on_profile: !book.show_on_profile } : b
+                                        ));
+                                        toast({ title: book.show_on_profile ? "Hidden from profile" : "Visible on profile" });
+                                      }
+                                    }}
+                                    title={book.show_on_profile ? "Hide from profile" : "Show on profile"}
+                                  >
+                                    {book.show_on_profile ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                  </Button>
                                   <Button
                                     variant="ghost"
                                     size="icon"
@@ -368,13 +391,6 @@ const Earn = () => {
                                           toast({
                                             title: "Link copied",
                                             description: "Public book link copied to clipboard.",
-                                          });
-                                        })
-                                        .catch(() => {
-                                          toast({
-                                            title: "Failed to copy",
-                                            description: "Could not copy link to clipboard.",
-                                            variant: "destructive",
                                           });
                                         });
                                     }}
