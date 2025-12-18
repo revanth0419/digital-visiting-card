@@ -23,6 +23,7 @@ export type Database = {
           end_image_url: string | null
           id: string
           pages: Json | null
+          show_on_profile: boolean | null
           title: string
           updated_at: string
           user_id: string
@@ -35,6 +36,7 @@ export type Database = {
           end_image_url?: string | null
           id?: string
           pages?: Json | null
+          show_on_profile?: boolean | null
           title: string
           updated_at?: string
           user_id: string
@@ -47,6 +49,7 @@ export type Database = {
           end_image_url?: string | null
           id?: string
           pages?: Json | null
+          show_on_profile?: boolean | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -149,6 +152,57 @@ export type Database = {
           type?: string
           updated_at?: string | null
           url?: string
+        }
+        Relationships: []
+      }
+      music_tracks: {
+        Row: {
+          audio_url: string | null
+          cover_image_url: string | null
+          created_at: string
+          genre: string | null
+          has_vocals: boolean | null
+          id: string
+          language: string | null
+          lyrics: string | null
+          mood: string | null
+          prompt: string | null
+          show_on_profile: boolean | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          audio_url?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          genre?: string | null
+          has_vocals?: boolean | null
+          id?: string
+          language?: string | null
+          lyrics?: string | null
+          mood?: string | null
+          prompt?: string | null
+          show_on_profile?: boolean | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          audio_url?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          genre?: string | null
+          has_vocals?: boolean | null
+          id?: string
+          language?: string | null
+          lyrics?: string | null
+          mood?: string | null
+          prompt?: string | null
+          show_on_profile?: boolean | null
+          title?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

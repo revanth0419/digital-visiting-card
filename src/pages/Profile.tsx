@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client"; // TODO: Supabase Auth/Storage still in use
+import { supabase } from "@/integrations/supabase/client";
 import { getSignedUrl, extractStoragePath } from "@/lib/storage";
 import { profileViewRateLimiter } from "@/lib/rate-limit";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ExternalLink, Zap, Video, QrCode, ChevronDown, Link2, ShoppingBag, Image as ImageIcon, UserPlus, UserCheck, BookOpen } from "lucide-react";
+import { ExternalLink, Zap, Video, QrCode, ChevronDown, Link2, ShoppingBag, Image as ImageIcon, UserPlus, UserCheck, BookOpen, Music4 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,6 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// Using Supabase directly instead of custom API
 
 type Profile = {
   id: string;
@@ -30,7 +29,7 @@ type Profile = {
   profile_theme: string | null;
   background_url: string | null;
   background_type: string | null;
-  user_id?: string; // Optional since public_profiles doesn't have it
+  user_id?: string;
 };
 
 type Link = {
@@ -52,6 +51,17 @@ type Media = {
   description: string | null;
 };
 
+type MusicTrack = {
+  id: string;
+  title: string;
+  genre: string | null;
+  mood: string | null;
+  has_vocals: boolean;
+  audio_url: string | null;
+  cover_image_url: string | null;
+  created_at: string;
+};
+
 const Profile = () => {
   const { username } = useParams();
   const { toast } = useToast();
@@ -70,6 +80,7 @@ const Profile = () => {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [books, setBooks] = useState<any[]>([]);
+  const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -102,14 +113,23 @@ const Profile = () => {
         .eq("id", profileData.id)
         .single();
 
-      // Always fetch books for this profile (public books are visible to everyone)
+      // Fetch books and music for this profile (only show_on_profile = true for public view)
       if (ownerData?.user_id) {
         const { data: booksData } = await supabase
           .from("books")
           .select("*")
           .eq("user_id", ownerData.user_id)
+          .eq("show_on_profile", true)
           .order("created_at", { ascending: false });
         if (booksData) setBooks(booksData);
+
+        const { data: musicData } = await supabase
+          .from("music_tracks")
+          .select("*")
+          .eq("user_id", ownerData.user_id)
+          .eq("show_on_profile", true)
+          .order("created_at", { ascending: false });
+        if (musicData) setMusicTracks(musicData as MusicTrack[]);
       }
 
       // For subscriptions, we need to check if viewing someone else's profile
@@ -896,8 +916,8 @@ const Profile = () => {
           transition={{ delay: 0.6, duration: 0.5 }}
           className="mb-12"
         >
-          <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-2 shadow-xl border border-white/20 max-w-md mx-auto">
-            <div className="grid grid-cols-4 gap-2 relative">
+          <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-2 shadow-xl border border-white/20 max-w-xl mx-auto">
+            <div className="grid grid-cols-5 gap-1 relative">
               {/* Animated Background Slider */}
               <motion.div
                 layoutId="activeTab"
@@ -905,15 +925,17 @@ const Profile = () => {
                 style={{
                   background: `linear-gradient(135deg, ${themeColor}, ${themeColor}cc)`,
                   boxShadow: `0 4px 20px ${themeColor}50`,
-                  width: "calc(25% - 4px)",
+                  width: "calc(20% - 4px)",
                   left:
                     activeTab === "links"
                       ? "4px"
                       : activeTab === "shop"
-                        ? "calc(25% + 2px)"
+                        ? "calc(20% + 2px)"
                         : activeTab === "gallery"
-                          ? "calc(50% + 0px)"
-                          : "calc(75% - 2px)",
+                          ? "calc(40% + 0px)"
+                          : activeTab === "books"
+                            ? "calc(60% - 2px)"
+                            : "calc(80% - 4px)",
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               />
@@ -921,7 +943,7 @@ const Profile = () => {
               {/* Tab Buttons */}
               <button
                 onClick={() => setActiveTab("links")}
-                className={`relative z-10 py-4 px-4 rounded-2xl font-semibold text-sm transition-colors duration-300 flex items-center justify-center gap-2 ${
+                className={`relative z-10 py-3 px-2 rounded-2xl font-semibold text-xs transition-colors duration-300 flex items-center justify-center gap-1 ${
                   activeTab === "links" ? "text-white" : `${getTextColor()} opacity-60`
                 }`}
               >
@@ -931,7 +953,7 @@ const Profile = () => {
               
               <button
                 onClick={() => setActiveTab("shop")}
-                className={`relative z-10 py-4 px-4 rounded-2xl font-semibold text-sm transition-colors duration-300 flex items-center justify-center gap-2 ${
+                className={`relative z-10 py-3 px-2 rounded-2xl font-semibold text-xs transition-colors duration-300 flex items-center justify-center gap-1 ${
                   activeTab === "shop" ? "text-white" : `${getTextColor()} opacity-60`
                 }`}
               >
@@ -941,7 +963,7 @@ const Profile = () => {
               
               <button
                 onClick={() => setActiveTab("gallery")}
-                className={`relative z-10 py-4 px-4 rounded-2xl font-semibold text-sm transition-colors duration-300 flex items-center justify-center gap-2 ${
+                className={`relative z-10 py-3 px-2 rounded-2xl font-semibold text-xs transition-colors duration-300 flex items-center justify-center gap-1 ${
                   activeTab === "gallery" ? "text-white" : `${getTextColor()} opacity-60`
                 }`}
               >
@@ -950,12 +972,21 @@ const Profile = () => {
               </button>
               <button
                 onClick={() => setActiveTab("books")}
-                className={`relative z-10 py-4 px-4 rounded-2xl font-semibold text-sm transition-colors duration-300 flex items-center justify-center gap-2 ${
+                className={`relative z-10 py-3 px-2 rounded-2xl font-semibold text-xs transition-colors duration-300 flex items-center justify-center gap-1 ${
                   activeTab === "books" ? "text-white" : `${getTextColor()} opacity-60`
                 }`}
               >
                 <BookOpen className="w-4 h-4" />
                 <span className="hidden sm:inline">Books</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("music")}
+                className={`relative z-10 py-3 px-2 rounded-2xl font-semibold text-xs transition-colors duration-300 flex items-center justify-center gap-1 ${
+                  activeTab === "music" ? "text-white" : `${getTextColor()} opacity-60`
+                }`}
+              >
+                <Music4 className="w-4 h-4" />
+                <span className="hidden sm:inline">Music</span>
               </button>
             </div>
           </div>
@@ -1137,6 +1168,112 @@ const Profile = () => {
                         </div>
                       </div>
                     </motion.a>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {activeTab === "music" && (
+          <motion.div
+            key="music"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4"
+          >
+            {musicTracks.length === 0 ? (
+              <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-12 text-center border border-white/20">
+                <motion.div
+                  initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+                >
+                  <motion.div
+                    animate={{ 
+                      rotate: [0, -5, 5, -5, 0],
+                      scale: [1, 1.05, 1.05, 1.05, 1]
+                    }}
+                    transition={{ 
+                      duration: 2,
+                      ease: "easeInOut",
+                      times: [0, 0.2, 0.4, 0.6, 1],
+                      repeat: Infinity,
+                      repeatDelay: 3
+                    }}
+                    className="text-8xl mb-6 inline-block"
+                  >
+                    🎵
+                  </motion.div>
+                  <h3 className={`text-2xl font-bold mb-3 ${getTextColor()}`}>No music yet</h3>
+                  <p className={`text-base ${getTextColor()} opacity-70 max-w-md mx-auto`}>
+                    This user hasn't shared any music tracks yet.
+                  </p>
+                </motion.div>
+              </div>
+            ) : (
+              <div className={`grid gap-6 ${layoutStyle === "grid" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+                <AnimatePresence>
+                  {musicTracks.map((track, index) => (
+                    <motion.div
+                      key={track.id}
+                      className="block group"
+                      initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -30, scale: 0.95 }}
+                      transition={{ 
+                        duration: 0.4, 
+                        delay: index * 0.08,
+                        ease: [0.23, 1, 0.32, 1]
+                      }}
+                    >
+                      <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl overflow-hidden border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 relative group">
+                        <div 
+                          className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"
+                          style={{
+                            background: `linear-gradient(135deg, ${themeColor}80, transparent)`,
+                            filter: "blur(20px)",
+                            transform: "scale(1.05)"
+                          }}
+                        />
+                        
+                        <div className="p-0">
+                          {track.cover_image_url ? (
+                            <div className="relative overflow-hidden aspect-square max-h-48">
+                              <img 
+                                src={track.cover_image_url} 
+                                alt={track.title} 
+                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                loading="lazy"
+                              />
+                            </div>
+                          ) : (
+                            <div 
+                              className="aspect-square max-h-48 flex items-center justify-center"
+                              style={{ background: `linear-gradient(135deg, ${themeColor}40, ${themeColor}20)` }}
+                            >
+                              <Music4 className="w-16 h-16" style={{ color: themeColor }} />
+                            </div>
+                          )}
+                          <div className="p-5">
+                            <h4 className={`font-bold text-lg ${getTextColor()} mb-2 line-clamp-2`}>
+                              {track.title}
+                            </h4>
+                            <p className={`text-sm ${getTextColor()} opacity-70`}>
+                              {track.genre} • {track.mood} • {track.has_vocals ? "With Vocals" : "Instrumental"}
+                            </p>
+                            {track.audio_url && (
+                              <audio controls src={track.audio_url} className="w-full mt-3 h-8" />
+                            )}
+                            <p className="text-xs mt-3 opacity-50" style={{ color: themeColor }}>
+                              {track.created_at ? new Date(track.created_at).toLocaleDateString() : "Recently created"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
                   ))}
                 </AnimatePresence>
               </div>
