@@ -8,7 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
-import Earn from "./pages/Earn";
+
 import Profile from "./pages/Profile";
 import Search from "./pages/Search";
 import PublicBook from "./pages/PublicBook";
