@@ -32,7 +32,7 @@ function generateSimpleAudio(prompt: string, duration: number, genre: string): {
   // Create a descriptive response based on the prompt
   const title = `${genre.charAt(0).toUpperCase() + genre.slice(1)} - ${prompt.substring(0, 30)}${prompt.length > 30 ? '...' : ''}`;
   const description = `A ${duration}-second ${genre} track inspired by: "${prompt}"`;
-  
+
   // Generate a simple WAV header and audio data
   // This is a minimal WAV file with silence (for demo purposes)
   const sampleRate = 44100;
@@ -41,17 +41,17 @@ function generateSimpleAudio(prompt: string, duration: number, genre: string): {
   const numSamples = sampleRate * Math.min(duration, 30); // Cap at 30 seconds
   const dataSize = numSamples * numChannels * (bitsPerSample / 8);
   const fileSize = 44 + dataSize;
-  
+
   const buffer = new ArrayBuffer(fileSize);
   const view = new DataView(buffer);
-  
+
   // WAV header
   const writeString = (offset: number, string: string) => {
     for (let i = 0; i < string.length; i++) {
       view.setUint8(offset + i, string.charCodeAt(i));
     }
   };
-  
+
   writeString(0, 'RIFF');
   view.setUint32(4, fileSize - 8, true);
   writeString(8, 'WAVE');
@@ -65,7 +65,7 @@ function generateSimpleAudio(prompt: string, duration: number, genre: string): {
   view.setUint16(34, bitsPerSample, true);
   writeString(36, 'data');
   view.setUint32(40, dataSize, true);
-  
+
   // Generate simple tone based on genre
   const frequencies: Record<string, number[]> = {
     lofi: [220, 330, 440],
@@ -79,36 +79,36 @@ function generateSimpleAudio(prompt: string, duration: number, genre: string): {
     devotional: [261.63, 311.13, 392],
     instrumental: [293.66, 369.99, 440],
   };
-  
+
   const freqs = frequencies[genre.toLowerCase()] || frequencies.ambient;
-  
+
   // Write audio samples with a simple chord progression
   let offset = 44;
   for (let i = 0; i < numSamples; i++) {
     const t = i / sampleRate;
     let sample = 0;
-    
+
     // Mix frequencies with envelope
     const envelope = Math.min(1, t * 2) * Math.max(0, 1 - (t / (duration * 0.9)));
-    
+
     for (const freq of freqs) {
       sample += Math.sin(2 * Math.PI * freq * t) * 0.2 * envelope;
     }
-    
+
     // Add some variation based on prompt hash
     const promptHash = prompt.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
     sample += Math.sin(2 * Math.PI * (200 + (promptHash % 100)) * t) * 0.1 * envelope;
-    
+
     // Clamp and convert to 16-bit
     sample = Math.max(-1, Math.min(1, sample));
     const value = Math.floor(sample * 32767);
-    
+
     // Write stereo
     view.setInt16(offset, value, true);
     view.setInt16(offset + 2, value, true);
     offset += 4;
   }
-  
+
   // Convert to base64
   const uint8Array = new Uint8Array(buffer);
   let binary = '';
@@ -116,11 +116,11 @@ function generateSimpleAudio(prompt: string, duration: number, genre: string): {
     binary += String.fromCharCode(uint8Array[i]);
   }
   const audioData = btoa(binary);
-  
+
   return { audioData, title, description };
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -136,13 +136,13 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer", "").trim();
-    
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-    
+
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-    
+
     if (authError || !user) {
       console.error("Auth error:", authError);
       return new Response(
@@ -187,11 +187,11 @@ serve(async (req) => {
 
     // Check for ElevenLabs API key first
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-    
+
     if (ELEVENLABS_API_KEY) {
       // Use ElevenLabs for high-quality music generation
       console.log("Using ElevenLabs for music generation");
-      
+
       const elevenLabsPrompt = genre ? `${genre} music: ${fullPrompt}` : fullPrompt;
 
       const response = await fetch("https://api.elevenlabs.io/v1/music", {
@@ -225,10 +225,10 @@ serve(async (req) => {
 
     // Fallback: Generate simple audio locally
     console.log("Generating audio locally");
-    
+
     const clampedDuration = Math.min(Math.max(duration, 5), 30);
     const { audioData, title, description } = generateSimpleAudio(fullPrompt, clampedDuration, genre);
-    
+
     // Return as JSON with base64 audio
     return new Response(
       JSON.stringify({

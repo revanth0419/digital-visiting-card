@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client"; 
+import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -112,9 +112,7 @@ const Dashboard = () => {
             <NotificationsDropdown />
             <ThemeToggle />
 
-            <Button variant="outline" size="sm" onClick={() => navigate("/dashboard/earn")}>
-              Earn
-            </Button>
+
 
             <Button variant="outline" size="sm" onClick={handleViewProfile}>
               <Eye className="w-4 h-4 mr-2" />

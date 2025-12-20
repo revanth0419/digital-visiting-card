@@ -89,7 +89,7 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
 const requireOwnership = (userIdParam: string) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const resourceUserId = req.params[userIdParam] || req.body[userIdParam] || req.query[userIdParam];
-    
+
     if (!req.user) {
       return res.status(401).json({ error: "Not authenticated" });
     }
@@ -343,13 +343,13 @@ app.post("/api/links", requireAuth, async (req, res) => {
 app.delete("/api/links/:id", requireAuth, async (req, res) => {
   try {
     const linkClient = ensureModel<typeof prisma.link>(prisma, "link");
-    
+
     // Verify ownership before deleting
-    const link = await linkClient.findUnique({ 
+    const link = await linkClient.findUnique({
       where: { id: req.params.id },
       include: { profile: true }
     });
-    
+
     if (!link || link.profile.user_id !== req.user!.id) {
       return res.status(403).json({ error: "You can only delete your own links" });
     }
@@ -371,7 +371,7 @@ app.put("/api/links/order", requireAuth, async (req, res) => {
       where: { id: { in: linkIds } },
       include: { profile: true }
     });
-    
+
     const unauthorized = links.some(link => link.profile.user_id !== req.user!.id);
     if (unauthorized) {
       return res.status(403).json({ error: "You can only reorder your own links" });
@@ -438,13 +438,13 @@ app.post("/api/media", requireAuth, async (req, res) => {
 app.delete("/api/media/:id", requireAuth, async (req, res) => {
   try {
     const mediaClient = ensureModel<typeof prisma.media>(prisma, "media");
-    
+
     // Verify ownership before deleting
-    const media = await mediaClient.findUnique({ 
+    const media = await mediaClient.findUnique({
       where: { id: req.params.id },
       include: { profile: true }
     });
-    
+
     if (!media || media.profile.user_id !== req.user!.id) {
       return res.status(403).json({ error: "You can only delete your own media" });
     }
@@ -503,11 +503,23 @@ app.post(
         buffer.writeInt16LE(Math.floor(val), 44 + i * 2);
       }
 
-      res.setHeader("Content-Type", "audio/wav");
-      res.send(buffer);
+      // Convert buffer to base64
+      const audioBase64 = buffer.toString("base64");
+
+      res.json({
+        data: {
+          audioBase64,
+          mime: "audio/wav",
+          title: `Generated ${genre} Track`,
+          lyrics: null,
+          image_url: null
+        },
+        error: null
+      });
+
     } catch (error: any) {
       console.error("[Music] Error:", error);
-      res.status(500).json({ status: "error", message: error.message });
+      res.status(500).json({ data: null, error: error.message || "Failed to generate music" });
     }
   }
 );
@@ -522,127 +534,127 @@ app.post(
     keyFn: (req) => `user:${req.user?.id ?? "unknown"}`,
   }),
   async (req, res) => {
-  try {
-    console.log("[books/generate] incoming body:", { ...req.body, coverImageData: req.body.coverImageData ? "present" : "missing" });
-    const { prompt, title, description, coverImageData, endImageData } = req.body;
-    
-    // Use authenticated user's ID for security
-    const userId = req.user!.id;
-
-    if (!prompt) {
-      return res.status(400).json({
-        data: null,
-        error: "Missing prompt"
-      });
-    }
-
-    // Generate book content using OpenAI with fallback
-    let content = "";
     try {
-      const aiResponse = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: "You are an expert novelist." },
-          { role: "user", content: `Write a detailed, multi-chapter book based on this idea: ${prompt}` }
-        ],
-        max_tokens: 4000
-      });
+      console.log("[books/generate] incoming body:", { ...req.body, coverImageData: req.body.coverImageData ? "present" : "missing" });
+      const { prompt, title, description, coverImageData, endImageData } = req.body;
 
-      content = aiResponse.choices[0]?.message?.content ?? "";
+      // Use authenticated user's ID for security
+      const userId = req.user!.id;
 
-      if (!content.trim()) {
-        throw new Error("OpenAI returned empty content");
+      if (!prompt) {
+        return res.status(400).json({
+          data: null,
+          error: "Missing prompt"
+        });
       }
 
-      console.log("[books/generate] OpenAI content generated, length:", content.length);
-    } catch (openaiError: any) {
-      console.error("[books/generate] OpenAI error:", openaiError);
-      console.error("[books/generate] OpenAI error details:", {
-        message: openaiError?.message,
-        status: openaiError?.status,
-        code: openaiError?.code
-      });
+      // Generate book content using OpenAI with fallback
+      let content = "";
+      try {
+        const aiResponse = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: "You are an expert novelist." },
+            { role: "user", content: `Write a detailed, multi-chapter book based on this idea: ${prompt}` }
+          ],
+          max_tokens: 4000
+        });
 
-      // FALLBACK: Create offline book instead of returning 500
-      content =
-        `Offline Book Fallback\n\n` +
-        `We could not reach OpenAI, so this is a basic book generated by the server.\n\n` +
-        `Prompt: ${prompt}\n\n` +
-        `Chapter 1: Beginning\n\n` +
-        `This is a placeholder chapter for the story about: ${prompt}\n\n` +
-        `The full story would explore themes related to this concept and develop characters ` +
-        `and plotlines based on the idea you provided. Since we're operating in offline mode, ` +
-        `this is a simplified version that demonstrates the book generation feature.\n\n` +
-        `Chapter 2: Development\n\n` +
-        `As the story progresses, we would see how the central idea of "${prompt}" unfolds ` +
-        `through various narrative elements and character interactions.\n\n` +
-        `Chapter 3: Conclusion\n\n` +
-        `The story would conclude by resolving the main conflicts and themes introduced ` +
-        `throughout the narrative, bringing closure to the tale of "${prompt}".\n`;
+        content = aiResponse.choices[0]?.message?.content ?? "";
 
-      console.log("[books/generate] Using fallback content due to OpenAI error");
-    }
+        if (!content.trim()) {
+          throw new Error("OpenAI returned empty content");
+        }
 
-    // Split content into pages for reading experience
-    function splitContentIntoPages(content: string, wordsPerPage = 300): string[] {
-      const words = content.split(/\s+/).filter(Boolean);
-      const pages: string[] = [];
+        console.log("[books/generate] OpenAI content generated, length:", content.length);
+      } catch (openaiError: any) {
+        console.error("[books/generate] OpenAI error:", openaiError);
+        console.error("[books/generate] OpenAI error details:", {
+          message: openaiError?.message,
+          status: openaiError?.status,
+          code: openaiError?.code
+        });
 
-      for (let i = 0; i < words.length; i += wordsPerPage) {
-        pages.push(words.slice(i, i + wordsPerPage).join(" "));
+        // FALLBACK: Create offline book instead of returning 500
+        content =
+          `Offline Book Fallback\n\n` +
+          `We could not reach OpenAI, so this is a basic book generated by the server.\n\n` +
+          `Prompt: ${prompt}\n\n` +
+          `Chapter 1: Beginning\n\n` +
+          `This is a placeholder chapter for the story about: ${prompt}\n\n` +
+          `The full story would explore themes related to this concept and develop characters ` +
+          `and plotlines based on the idea you provided. Since we're operating in offline mode, ` +
+          `this is a simplified version that demonstrates the book generation feature.\n\n` +
+          `Chapter 2: Development\n\n` +
+          `As the story progresses, we would see how the central idea of "${prompt}" unfolds ` +
+          `through various narrative elements and character interactions.\n\n` +
+          `Chapter 3: Conclusion\n\n` +
+          `The story would conclude by resolving the main conflicts and themes introduced ` +
+          `throughout the narrative, bringing closure to the tale of "${prompt}".\n`;
+
+        console.log("[books/generate] Using fallback content due to OpenAI error");
       }
 
-      return pages.length > 0 ? pages : [content];
-    }
+      // Split content into pages for reading experience
+      function splitContentIntoPages(content: string, wordsPerPage = 300): string[] {
+        const words = content.split(/\s+/).filter(Boolean);
+        const pages: string[] = [];
 
-    console.log("[books/generate] Content generation complete. Length:", content.length);
+        for (let i = 0; i < words.length; i += wordsPerPage) {
+          pages.push(words.slice(i, i + wordsPerPage).join(" "));
+        }
 
-    const pages = splitContentIntoPages(content, 300);
-    console.log("[books/generate] Content split into", pages.length, "pages");
+        return pages.length > 0 ? pages : [content];
+      }
 
-    // Generate cover image using OpenAI (with fallback)
-    let coverImageUrl: string | null = null;
-    let endImageUrl: string | null = null;
+      console.log("[books/generate] Content generation complete. Length:", content.length);
 
-    // If user uploaded a specific cover, we can use that (assuming it's a URL or base64 we need to store)
-    // For simplicity, if it's base64, we might need to upload it or store it large (DB limits).
-    // The user said "return them in the response along with pages".
-    // If coverImageData is provided (as base64 or URL), use it.
+      const pages = splitContentIntoPages(content, 300);
+      console.log("[books/generate] Content split into", pages.length, "pages");
 
-    if (coverImageData) {
-      coverImageUrl = coverImageData; // Assume it's a usable string (url or data uri)
-      console.log("[books/generate] Using user-provided cover image");
-    }
+      // Generate cover image using OpenAI (with fallback)
+      let coverImageUrl: string | null = null;
+      let endImageUrl: string | null = null;
 
-    if (endImageData) {
-      endImageUrl = endImageData;
-    }
+      // If user uploaded a specific cover, we can use that (assuming it's a URL or base64 we need to store)
+      // For simplicity, if it's base64, we might need to upload it or store it large (DB limits).
+      // The user said "return them in the response along with pages".
+      // If coverImageData is provided (as base64 or URL), use it.
 
-    const finalTitle = title || "Untitled Book";
+      if (coverImageData) {
+        coverImageUrl = coverImageData; // Assume it's a usable string (url or data uri)
+        console.log("[books/generate] Using user-provided cover image");
+      }
 
-    try {
-      if (!coverImageUrl) {
-        console.log("[books/generate] Generating cover image...");
+      if (endImageData) {
+        endImageUrl = endImageData;
+      }
 
-        const imagePrompt = `
+      const finalTitle = title || "Untitled Book";
+
+      try {
+        if (!coverImageUrl) {
+          console.log("[books/generate] Generating cover image...");
+
+          const imagePrompt = `
       Create a professional, detailed book cover illustration for a novel titled "${finalTitle}".
       The cover should represent this story idea: ${prompt}.
       No text, no words, no logos. Just artwork.
       Cinematic lighting, vibrant colors, highly detailed, in a fantasy/sci-fi illustration style.
       `;
 
-        const imageResponse = await openai.images.generate({
-          model: "dall-e-3",
-          prompt: imagePrompt,
-          size: "1024x1024",
-          n: 1,
-        });
+          const imageResponse = await openai.images.generate({
+            model: "dall-e-3",
+            prompt: imagePrompt,
+            size: "1024x1024",
+            n: 1,
+          });
 
-        coverImageUrl = imageResponse.data?.[0]?.url ?? null;
+          coverImageUrl = imageResponse.data?.[0]?.url ?? null;
 
-        console.log("[books/generate] Cover image generated:", coverImageUrl);
-      }
-    } catch (imageError: any) {
+          console.log("[books/generate] Cover image generated:", coverImageUrl);
+        }
+      } catch (imageError: any) {
         console.error("[books/generate] OpenAI image error:", {
           message: imageError?.message,
           status: imageError?.response?.status,
@@ -763,9 +775,9 @@ app.get("/api/books/public/:username", async (req, res) => {
 
 app.patch("/api/books/:id", requireAuth, async (req, res) => {
   try {
-    const { title, description } = req.body || {};
+    const { title, description, show_on_profile } = req.body || {};
     const bookClient = ensureModel<any>(prisma, "book");
-    
+
     // Verify ownership before updating
     const existingBook = await bookClient.findUnique({ where: { id: req.params.id } });
     if (!existingBook || existingBook.userId !== req.user!.id) {
@@ -777,12 +789,97 @@ app.patch("/api/books/:id", requireAuth, async (req, res) => {
       data: {
         ...(title && { title }),
         ...(description !== undefined && { description }),
+        ...(show_on_profile !== undefined && { show_on_profile }),
       },
     });
     res.json({ data: book, error: null });
   } catch (error: any) {
     console.error("Error updating book:", error);
     res.status(500).json({ data: null, error: error?.message || "Failed to update book" });
+  }
+});
+
+// Music Tracks
+app.get("/api/music/tracks", async (req, res) => {
+  const userId = String(req.query.userId || "");
+  try {
+    if (!userId) {
+      return res.json({ data: [], error: null });
+    }
+    const musicClient = ensureModel<any>(prisma, "musicTrack");
+    const tracks = await musicClient.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: "desc" },
+    });
+    res.json({ data: tracks, error: null });
+  } catch (error: any) {
+    console.error("Error fetching music tracks:", error);
+    // Return empty if model doesn't exist or other error, to stay robust
+    res.json({ data: [], error: error?.message });
+  }
+});
+
+app.post("/api/music/tracks", requireAuth, async (req, res) => {
+  try {
+    const { title, prompt, genre, mood, language, has_vocals, lyrics, audio_url, cover_image_url, show_on_profile } = req.body;
+    const musicClient = ensureModel<any>(prisma, "musicTrack");
+
+    const track = await musicClient.create({
+      data: {
+        user_id: req.user!.id,
+        title,
+        prompt,
+        genre,
+        mood,
+        language,
+        has_vocals,
+        lyrics,
+        audio_url,
+        cover_image_url,
+        show_on_profile: show_on_profile ?? true,
+      },
+    });
+    res.json({ data: track, error: null });
+  } catch (error: any) {
+    console.error("Error creating music track:", error);
+    res.status(500).json({ data: null, error: error?.message || "Failed to create track" });
+  }
+});
+
+app.patch("/api/music/tracks/:id", requireAuth, async (req, res) => {
+  try {
+    const { show_on_profile } = req.body;
+    const musicClient = ensureModel<any>(prisma, "musicTrack");
+
+    // Verify ownership
+    const track = await musicClient.findUnique({ where: { id: req.params.id } });
+    if (!track || track.user_id !== req.user!.id) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    const updated = await musicClient.update({
+      where: { id: req.params.id },
+      data: { show_on_profile },
+    });
+    res.json({ data: updated, error: null });
+  } catch (error: any) {
+    res.status(500).json({ data: null, error: error?.message });
+  }
+});
+
+app.delete("/api/music/tracks/:id", requireAuth, async (req, res) => {
+  try {
+    const musicClient = ensureModel<any>(prisma, "musicTrack");
+    // Verify ownership
+    const track = await musicClient.findUnique({ where: { id: req.params.id } });
+    if (!track || track.user_id !== req.user!.id) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    await musicClient.delete({ where: { id: req.params.id } });
+    res.json({ data: true, error: null });
+  } catch (error: any) {
+    res.status(500).json({ data: null, error: error?.message });
   }
 });
 

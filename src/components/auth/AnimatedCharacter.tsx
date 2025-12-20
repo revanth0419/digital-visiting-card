@@ -12,7 +12,7 @@ interface AnimatedCharacterProps {
 const AnimatedCharacter = ({ expression, cursorPosition, isTypingPassword = false }: AnimatedCharacterProps) => {
   const [characterCenter, setCharacterCenter] = useState({ x: 0, y: 0 });
   const [hasWaved, setHasWaved] = useState(false);
-  
+
   const eyeX = useSpring(0, { stiffness: 150, damping: 15 });
   const eyeY = useSpring(0, { stiffness: 150, damping: 15 });
 
@@ -42,7 +42,7 @@ const AnimatedCharacter = ({ expression, cursorPosition, isTypingPassword = fals
       const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), 15);
       const moveX = Math.cos(angle) * (distance / 15) * 8;
       const moveY = Math.sin(angle) * (distance / 15) * 8;
-      
+
       eyeX.set(moveX);
       eyeY.set(moveY);
     }
@@ -154,12 +154,12 @@ const AnimatedCharacter = ({ expression, cursorPosition, isTypingPassword = fals
       id="character"
       className="relative"
       initial={{ scale: 0, opacity: 0, rotate: -10 }}
-      animate={{ 
-        scale: 1, 
+      animate={{
+        scale: 1,
         opacity: 1,
         rotate: hasWaved ? [0, -15, 15, -10, 10, 0] : 0
       }}
-      transition={{ 
+      transition={{
         scale: { type: "spring", stiffness: 200, damping: 20 },
         rotate: { duration: 0.8, delay: 0.3 }
       }}
@@ -181,7 +181,7 @@ const AnimatedCharacter = ({ expression, cursorPosition, isTypingPassword = fals
           }}
           transition={{ duration: 0.5 }}
         />
-        
+
         {/* Gradient Definition */}
         <defs>
           <linearGradient id="faceGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -194,16 +194,19 @@ const AnimatedCharacter = ({ expression, cursorPosition, isTypingPassword = fals
         {renderEyes()}
 
         {/* Mouth */}
-        <motion.path
-          stroke="hsl(240, 10%, 3.9%)"
-          strokeWidth="3"
-          strokeLinecap="round"
-          fill="none"
-          variants={mouthVariants}
-          animate={expression || "neutral"}
-          transition={{ duration: 0.4 }}
-          d={mouthVariants[expression as keyof typeof mouthVariants]?.d ?? mouthVariants.neutral.d}
-        />
+        {/* Mouth */}
+        {(mouthVariants[expression as keyof typeof mouthVariants]?.d || mouthVariants.neutral.d) && (
+          <motion.path
+            stroke="hsl(240, 10%, 3.9%)"
+            strokeWidth="3"
+            strokeLinecap="round"
+            fill="none"
+            variants={mouthVariants}
+            animate={expression || "neutral"}
+            transition={{ duration: 0.4 }}
+            d={mouthVariants[expression as keyof typeof mouthVariants]?.d || mouthVariants.neutral.d}
+          />
+        )}
 
         {/* Sparkles for happy expression */}
         {expression === "happy" && (
