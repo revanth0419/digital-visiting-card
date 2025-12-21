@@ -13,6 +13,7 @@ import Profile from "./pages/Profile";
 import Search from "./pages/Search";
 import PublicBook from "./pages/PublicBook";
 import NotFound from "./pages/NotFound";
+import RedirectToProfile from "./components/auth/RedirectToProfile";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,8 @@ const AnimatedRoutes = () => {
             <Dashboard />
           </motion.div>
         } />
+
+        <Route path="/profile" element={<RedirectToProfile />} />
 
         <Route path="/u/:username" element={
           <motion.div
