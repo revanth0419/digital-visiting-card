@@ -1,8 +1,13 @@
 import OpenAI from "openai";
 
-if (!process.env.OPENAI_API_KEY) {
-  console.warn("[openaiClient] Missing OPENAI_API_KEY.");
+const apiKey = process.env.OPENAI_API_KEY;
+
+if (!apiKey) {
+  console.warn("[openaiClient] Missing OPENAI_API_KEY. AI features will be disabled.");
 }
 
-export const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+export const openai = new OpenAI({
+  apiKey: apiKey || "dummy-key-for-initialization",
+  dangerouslyAllowBrowser: true // purely to silence some potential client-side reuse warnings if any
+});
 

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Zap, Link as LinkIcon, QrCode, Sparkles } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ScrollToTop } from "@/components/ui/ScrollToTop";
 
 const Index = () => {
   return (
@@ -16,13 +17,13 @@ const Index = () => {
       <section className="container mx-auto px-4 py-12 md:py-20 text-center">
         <div className="max-w-4xl mx-auto animate-fade-in">
           <div className="flex items-center justify-center gap-3 mb-6 animate-bounce-in">
-            <Zap className="w-12 h-12 md:w-16 md:h-16 text-primary" />
+            <img src="/dvc-logo.jpg" alt="Digital Visiting Card Logo" className="w-16 h-16 md:w-20 md:h-20 object-contain" />
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 text-gradient animate-slide-up">
-            Prism Link Spot
+            Digital Visiting Card
           </h1>
           <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto animate-fade-up">
-            Your personalized link hub with style. Share all your important links in one beautiful place.
+            Your smart digital link hub. Share all your important links in one beautiful place for free.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
             <Link to="/auth?mode=signup">
@@ -49,7 +50,7 @@ const Index = () => {
             <Card className="glass-card border-2 hover:shadow-elegant transition-all duration-300 animate-scale-in hover-lift">
               <CardContent className="p-6 text-center">
                 <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center"
-                     style={{ background: "var(--gradient-primary)" }}>
+                  style={{ background: "var(--gradient-primary)" }}>
                   <LinkIcon className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <h3 className="text-xl font-bold mb-2">Unlimited Links</h3>
@@ -62,7 +63,7 @@ const Index = () => {
             <Card className="glass-card border-2 hover:shadow-elegant transition-all duration-300 animate-scale-in hover-lift" style={{ animationDelay: "0.1s" }}>
               <CardContent className="p-6 text-center">
                 <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center"
-                     style={{ background: "var(--gradient-accent)" }}>
+                  style={{ background: "var(--gradient-accent)" }}>
                   <QrCode className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <h3 className="text-xl font-bold mb-2">QR Code</h3>
@@ -75,7 +76,7 @@ const Index = () => {
             <Card className="glass-card border-2 hover:shadow-elegant transition-all duration-300 animate-scale-in hover-lift" style={{ animationDelay: "0.2s" }}>
               <CardContent className="p-6 text-center">
                 <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center"
-                     style={{ background: "var(--gradient-vibrant)" }}>
+                  style={{ background: "var(--gradient-vibrant)" }}>
                   <Sparkles className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <h3 className="text-xl font-bold mb-2">Custom Themes</h3>
@@ -111,12 +112,18 @@ const Index = () => {
       <footer className="border-t border-border/50 py-8">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <Zap className="w-5 h-5" />
-            <span className="font-semibold">Prism Link Spot</span>
+            <img src="/dvc-logo.jpg" alt="Digital Visiting Card Logo" className="w-6 h-6 object-contain" />
+            <span className="font-semibold">Digital Visiting Card</span>
+          </div>
+          <div className="mb-4">
+            <Link to="/how-to-use" className="text-sm hover:underline hover:text-primary transition-colors">
+              How to Use
+            </Link>
           </div>
           <p className="text-sm">Built with modern web technologies</p>
         </div>
       </footer>
+      <ScrollToTop />
     </div>
   );
 };

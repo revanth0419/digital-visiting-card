@@ -132,6 +132,41 @@ const ensureModel = <T>(client: any, model: string): T => {
   return m as T;
 };
 
+const notifyFollowers = async (actorUserId: string, type: string, title: string, message: string, link: string | null = null) => {
+  try {
+    // Find all followers
+    const subscriptionClient = ensureModel<typeof prisma.subscription>(prisma, "subscription");
+    const followers = await subscriptionClient.findMany({
+      where: { subscribed_to_id: actorUserId },
+      select: { subscriber_id: true }
+    });
+
+    if (followers.length === 0) return;
+
+    const notificationClient = ensureModel<typeof prisma.notification>(prisma, "notification");
+
+    // Create notifications for all followers
+    // We use Promise.all instead of $transaction if keeping it simple, or transaction for atomicity.
+    // Since notifications are non-critical, we can just await them.
+    await prisma.$transaction(
+      followers.map(f =>
+        notificationClient.create({
+          data: {
+            user_id: f.subscriber_id,
+            type,
+            title,
+            message,
+            link,
+            read: false
+          }
+        })
+      )
+    );
+  } catch (error) {
+    console.error("Error notifying followers:", error);
+  }
+};
+
 const runBackendDiagnostics = async () => {
   const results: string[] = [];
   const fail = (msg: string) => results.push(`✖ ${msg}`);
@@ -280,10 +315,161 @@ app.put("/api/profiles/:userId", requireAuth, requireOwnership("userId"), async 
         avatar_url,
       },
     });
+
+    // Notify followers
+    if (display_name || bio) { // Only notify on significant content changes
+      notifyFollowers(
+        userId,
+        "profile_update",
+        "Profile Updated",
+        `${resolvedUsername} updated their profile.`,
+        `/u/${resolvedUsername}`
+      ).catch(err => console.error("Notify error:", err));
+    }
+
     res.json({ data: profile, error: null });
   } catch (error: any) {
     console.error("Error upserting profile:", error);
     res.status(500).json({ data: null, error: error?.message || "Failed to save profile" });
+  }
+});
+
+// Connections / Subscriptions
+app.post("/api/users/:id/connect", requireAuth, async (req, res) => {
+  const targetUserId = req.params.id;
+  const subscriberId = req.user!.id;
+
+  if (targetUserId === subscriberId) {
+    return res.status(400).json({ error: "You cannot connect to yourself" });
+  }
+
+  try {
+    const subscriptionClient = ensureModel<typeof prisma.subscription>(prisma, "subscription");
+
+    // Check if already connected
+    const existing = await subscriptionClient.findFirst({
+      where: {
+        subscriber_id: subscriberId,
+        subscribed_to_id: targetUserId,
+      },
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: "Already connected" });
+    }
+
+    const subscription = await subscriptionClient.create({
+      data: {
+        subscriber_id: subscriberId,
+        subscribed_to_id: targetUserId,
+      },
+    });
+
+    res.json({ data: subscription, error: null });
+
+    // Notify the target user that someone connected to them
+    // We look up the subscriber's name for the message
+    const subscriberProfile = await prisma.profile.findUnique({ where: { user_id: subscriberId } });
+    const subscriberName = subscriberProfile?.display_name || subscriberProfile?.username || "A user";
+
+    // We use a new helper or reuse notifyFollowers conceptually but target specific user
+    const notificationClient = ensureModel<typeof prisma.notification>(prisma, "notification");
+    await notificationClient.create({
+      data: {
+        user_id: targetUserId,
+        type: "connection",
+        title: "New Connection",
+        message: `${subscriberName} connected with you`,
+        link: `/u/${subscriberProfile?.username || ""}`,
+        read: false
+      }
+    }).catch(err => console.error("Error creating connection notification", err));
+  } catch (error: any) {
+    console.error("Error connecting users:", error);
+    res.status(500).json({ data: null, error: error?.message || "Failed to connect" });
+  }
+});
+
+app.post("/api/users/:id/disconnect", requireAuth, async (req, res) => {
+  const targetUserId = req.params.id;
+  const subscriberId = req.user!.id;
+
+  try {
+    const subscriptionClient = ensureModel<typeof prisma.subscription>(prisma, "subscription");
+
+    // Check if exists
+    const existing = await subscriptionClient.findFirst({
+      where: {
+        subscriber_id: subscriberId,
+        subscribed_to_id: targetUserId
+      }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: "Connection not found" });
+    }
+
+    await subscriptionClient.delete({
+      where: {
+        id: existing.id
+      },
+    });
+
+    res.json({ data: true, error: null });
+  } catch (error: any) {
+    console.error("Error disconnecting users:", error);
+    res.status(500).json({ data: null, error: error?.message || "Failed to disconnect" });
+  }
+});
+
+app.get("/api/users/:id/connections", async (req, res) => {
+  const userId = req.params.id;
+  // Optional: check if current user is following this userId
+  let currentUserId = null;
+  if (req.headers.authorization) {
+    try {
+      const token = req.headers.authorization.replace("Bearer ", "");
+      const { data } = await supabase.auth.getUser(token);
+      currentUserId = data.user?.id;
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  try {
+    const subscriptionClient = ensureModel<typeof prisma.subscription>(prisma, "subscription");
+
+    const followersCount = await subscriptionClient.count({
+      where: { subscribed_to_id: userId }
+    });
+
+    const followingCount = await subscriptionClient.count({
+      where: { subscriber_id: userId }
+    });
+
+    let isConnected = false;
+    if (currentUserId) {
+      const connection = await subscriptionClient.findFirst({
+        where: {
+          subscriber_id: currentUserId,
+          subscribed_to_id: userId
+        }
+      });
+      isConnected = !!connection;
+    }
+
+    res.json({
+      data: {
+        followersCount,
+        followingCount,
+        isConnected
+      },
+      error: null
+    });
+
+  } catch (error: any) {
+    console.error("Error fetching connections:", error);
+    res.status(500).json({ data: null, error: error?.message || "Failed to fetch connections" });
   }
 });
 
@@ -333,6 +519,16 @@ app.post("/api/links", requireAuth, async (req, res) => {
         show_in_links: Boolean(show_in_links ?? true),
       },
     });
+
+    // Notify followers
+    notifyFollowers(
+      req.user!.id,
+      "link_added",
+      "New Link Added",
+      `New link added: ${title}`,
+      url // Or link to profile? Let's link to profile actually
+    ).catch(err => console.error("Notify error:", err));
+
     res.json({ data: link, error: null });
   } catch (error: any) {
     console.error("Error creating link:", error);
@@ -356,6 +552,15 @@ app.delete("/api/links/:id", requireAuth, async (req, res) => {
 
     await linkClient.delete({ where: { id: req.params.id } });
     res.json({ data: link, error: null });
+
+    // Notify followers
+    notifyFollowers(
+      req.user!.id,
+      "gallery_added",
+      "New Gallery Item",
+      "New item added to gallery",
+      `/u/${(await prisma.profile.findUnique({ where: { user_id: req.user!.id } }))?.username || ""}`
+    ).catch(err => console.error("Notify error:", err));
   } catch (error: any) {
     console.error("Error deleting link:", error);
     res.status(500).json({ data: null, error: error?.message || "Failed to delete link" });
@@ -680,6 +885,16 @@ app.post(
       });
 
       console.log("[books/generate] Book created successfully:", book.id);
+
+      // Notify followers
+      notifyFollowers(
+        req.user!.id,
+        "book_added",
+        "New Book Added",
+        `New book added: ${finalTitle}`,
+        `/u/${(await prisma.profile.findUnique({ where: { user_id: req.user!.id } }))?.username || ""}`
+      ).catch(err => console.error("Notify error:", err));
+
       return res.status(201).json({ data: book, error: null });
     } catch (error: any) {
       console.error("[books/generate] error:", error);
@@ -702,7 +917,6 @@ app.get("/api/books/by-user/:userId", async (req, res) => {
     const { userId } = req.params;
 
     if (!userId) {
-      console.log("[books/by-user] No userId provided, returning empty array");
       return res.json({ data: [], error: null });
     }
 
@@ -712,12 +926,9 @@ app.get("/api/books/by-user/:userId", async (req, res) => {
       orderBy: { createdAt: "desc" },
     });
 
-    console.log("[books/by-user] returning", books.length, "books for", userId);
-    // Return empty array if no books, not 404
     return res.json({ data: books || [], error: null });
   } catch (error: any) {
     console.error("[books/by-user] error:", error);
-    console.error("[books/by-user] error stack:", error?.stack);
     return res.status(500).json({
       data: null,
       error: error?.message || "Failed to fetch books"
@@ -730,8 +941,6 @@ app.get("/api/books/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
-    console.log("[books/:id] fetching book", id);
-
     const bookClient = ensureModel<any>(prisma, "book");
     const book = await bookClient.findUnique({
       where: { id },
@@ -741,8 +950,6 @@ app.get("/api/books/:id", async (req, res) => {
       return res.status(404).json({ data: null, error: "Book not found" });
     }
 
-    // Optionally, also fetch profile/author username if available
-    // For now, just return the book object.
     return res.json({ data: book, error: null });
   } catch (error: any) {
     console.error("[books/:id] error:", error);
@@ -752,6 +959,7 @@ app.get("/api/books/:id", async (req, res) => {
     });
   }
 });
+
 
 app.get("/api/books/public/:username", async (req, res) => {
   try {
@@ -840,9 +1048,99 @@ app.post("/api/music/tracks", requireAuth, async (req, res) => {
       },
     });
     res.json({ data: track, error: null });
+
+    // Notify followers
+    notifyFollowers(
+      req.user!.id,
+      "music_added",
+      "New Music Added",
+      "New music track added to profile",
+      `/u/${(await prisma.profile.findUnique({ where: { user_id: req.user!.id } }))?.username || ""}`
+    ).catch(err => console.error("Notify error:", err));
   } catch (error: any) {
     console.error("Error creating music track:", error);
     res.status(500).json({ data: null, error: error?.message || "Failed to create track" });
+  }
+});
+
+// Gallery (Media)
+app.post("/api/media", requireAuth, async (req, res) => {
+  try {
+    const { type, url, title, description, order_index } = req.body;
+    const profile = await prisma.profile.findUnique({ where: { user_id: req.user!.id } });
+
+    if (!profile) {
+      return res.status(404).json({ error: "Profile not found" });
+    }
+
+    const mediaClient = ensureModel<any>(prisma, "media");
+    const media = await mediaClient.create({
+      data: {
+        profile_id: profile.id,
+        type,
+        url,
+        title,
+        description,
+        order_index: order_index || 0,
+      }
+    });
+
+    res.json({ data: media, error: null });
+
+    // Notify followers
+    notifyFollowers(
+      req.user!.id,
+      "gallery_added",
+      "New Gallery Item",
+      `checked out my new ${type}: ${title}`,
+      `/u/${profile.username || ""}`
+    ).catch(err => console.error("Notify error:", err));
+  } catch (error: any) {
+    console.error("Error creating media:", error);
+    res.status(500).json({ data: null, error: error?.message || "Failed to create media" });
+  }
+});
+
+// Links (includes Shop Items)
+app.post("/api/links", requireAuth, async (req, res) => {
+  try {
+    const { title, url, icon, image_url, price, order_index, is_shopping_link, show_in_links } = req.body;
+    const profile = await prisma.profile.findUnique({ where: { user_id: req.user!.id } });
+
+    if (!profile) {
+      return res.status(404).json({ error: "Profile not found" });
+    }
+
+    const linkClient = ensureModel<any>(prisma, "link");
+    const link = await linkClient.create({
+      data: {
+        profile_id: profile.id,
+        title,
+        url,
+        icon,
+        image_url,
+        price,
+        order_index: order_index || 0,
+        is_shopping_link: !!is_shopping_link,
+        show_in_links: !!show_in_links,
+      }
+    });
+
+    res.json({ data: link, error: null });
+
+    // Notify followers ONLY if it's a shopping link
+    if (is_shopping_link) {
+      notifyFollowers(
+        req.user!.id,
+        "shop_added",
+        "New Shop Item",
+        `New item in shop: ${title}`,
+        `/u/${profile.username || ""}`
+      ).catch(err => console.error("Notify error:", err));
+    }
+  } catch (error: any) {
+    console.error("Error creating link:", error);
+    res.status(500).json({ data: null, error: error?.message || "Failed to create link" });
   }
 });
 
@@ -887,6 +1185,65 @@ app.delete("/api/music/tracks/:id", requireAuth, async (req, res) => {
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("Unhandled error:", err?.message || err);
   res.status(500).json({ data: null, error: err?.message || "Internal server error" });
+});
+
+// Notifications
+app.get("/api/notifications", requireAuth, async (req, res) => {
+  try {
+    const notificationClient = ensureModel<any>(prisma, "notification");
+    const notifications = await notificationClient.findMany({
+      where: { user_id: req.user!.id },
+      orderBy: { created_at: "desc" },
+      take: 50, // Limit to last 50
+    });
+    res.json({ data: notifications, error: null });
+  } catch (error: any) {
+    console.error("Error fetching notifications:", error);
+    res.status(500).json({ data: null, error: error?.message });
+  }
+});
+
+app.put("/api/notifications/:id/read", requireAuth, async (req, res) => {
+  try {
+    const notificationClient = ensureModel<any>(prisma, "notification");
+
+    // Verify ownership
+    const notification = await notificationClient.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!notification || notification.user_id !== req.user!.id) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    const updated = await notificationClient.update({
+      where: { id: req.params.id },
+      data: { read: true }
+    });
+
+    res.json({ data: updated, error: null });
+  } catch (error: any) {
+    console.error("Error reading notification:", error);
+    res.status(500).json({ data: null, error: error?.message });
+  }
+});
+
+app.put("/api/notifications/read-all", requireAuth, async (req, res) => {
+  try {
+    const notificationClient = ensureModel<any>(prisma, "notification");
+    const updated = await notificationClient.updateMany({
+      where: {
+        user_id: req.user!.id,
+        read: false
+      },
+      data: { read: true }
+    });
+
+    res.json({ data: updated, error: null });
+  } catch (error: any) {
+    console.error("Error marking all notifications read:", error);
+    res.status(500).json({ data: null, error: error?.message });
+  }
 });
 
 // Subscriptions

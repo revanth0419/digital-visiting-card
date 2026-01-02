@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,9 +66,9 @@ const SortableLink = ({
         <GripVertical className="w-5 h-5 text-muted-foreground" />
       </div>
       {link.image_url && (
-        <img 
-          src={link.image_url} 
-          alt={link.title} 
+        <img
+          src={link.image_url}
+          alt={link.title}
           className="w-12 h-12 object-cover rounded"
         />
       )}
@@ -125,7 +126,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   const fetchLinks = async () => {
     try {
       setLoading(true);
-      
+
       // Get profile
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
@@ -278,19 +279,24 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
     setAdding(true);
 
     try {
-      const { error } = await supabase.from("links").insert({
-        profile_id: profileId,
-        title: newTitle,
-        url: normalizedUrl,
-        icon: newIcon || null,
-        image_url: manualImageUrl || previewImage,
-        price: previewPrice,
-        order_index: links.length,
-        is_shopping_link: isShoppingLink,
-        show_in_links: showInLinks,
+      const { error } = await apiFetch("/links", {
+        method: "POST",
+        body: JSON.stringify({
+          title: newTitle,
+          url: normalizedUrl,
+          icon: newIcon || null,
+          image_url: manualImageUrl || previewImage,
+          price: previewPrice,
+          order_index: links.length,
+          is_shopping_link: isShoppingLink,
+          show_in_links: showInLinks,
+        }),
+        headers: {
+          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        }
       });
 
-      if (error) throw error;
+      if (error) throw new Error(error);
 
       toast({
         title: "Link added!",
@@ -406,9 +412,9 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
             {previewImage && (
               <div className="mt-2 p-3 border rounded-lg bg-background/50 space-y-2">
                 <p className="text-xs text-muted-foreground">Product Preview:</p>
-                <img 
-                  src={previewImage} 
-                  alt="Link preview" 
+                <img
+                  src={previewImage}
+                  alt="Link preview"
                   className="w-24 h-24 object-cover rounded"
                 />
                 {previewPrice && (
@@ -431,9 +437,9 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
             {manualImageUrl && (
               <div className="mt-2 p-3 border rounded-lg bg-background/50 space-y-2">
                 <p className="text-xs text-muted-foreground">Manual Image Preview:</p>
-                <img 
-                  src={manualImageUrl} 
-                  alt="Manual preview" 
+                <img
+                  src={manualImageUrl}
+                  alt="Manual preview"
                   className="w-24 h-24 object-cover rounded"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
@@ -514,9 +520,9 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
             </SortableContext>
           </DndContext>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <p>No links yet</p>
-            <p className="text-sm">Add your first link above</p>
+          <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+            <p className="text-lg font-medium mb-1">No links yet</p>
+            <p className="text-sm">Click "Add Link" above to get started sharing your content!</p>
           </div>
         )}
       </CardContent>

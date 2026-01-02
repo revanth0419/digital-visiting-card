@@ -97,7 +97,7 @@ const QRCodeDisplay = ({ userId }: QRCodeDisplayProps) => {
       try {
         await navigator.share({
           title: `${username}'s Profile`,
-          text: `Check out my profile on Prism Link Spot!`,
+          text: `Check out my profile on Digital Visiting Card!`,
           url: profileUrl,
         });
       } catch (error) {

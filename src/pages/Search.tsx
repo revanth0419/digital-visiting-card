@@ -58,11 +58,25 @@ export default function Search() {
         // For public search, we don't check subscriptions since we don't have user_id
         // Filter out any null username entries
         const validProfiles = profilesData.filter(p => p.username && p.id);
+
+        // Fetch current user's subscriptions to determine isSubscribed status
+        let subscribedIds = new Set<string>();
+        if (currentUserId) {
+          const { data: subscriptions } = await supabase
+            .from("subscriptions")
+            .select("subscribed_to_id")
+            .eq("subscriber_id", currentUserId);
+
+          if (subscriptions) {
+            subscriptions.forEach(sub => subscribedIds.add(sub.subscribed_to_id));
+          }
+        }
+
         setProfiles(validProfiles.map(p => ({
           ...p,
           id: p.id!,
           username: p.username,
-          isSubscribed: false
+          isSubscribed: subscribedIds.has(p.id!)
         })));
       }
     } catch (error) {
@@ -161,14 +175,17 @@ export default function Search() {
                       )}
                     </div>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/u/${profile.username}`)}
-                      className="min-w-[100px]"
-                    >
-                      View Profile
-                    </Button>
+                    <div className="flex flex-col gap-2 min-w-[100px]">
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/u/${profile.username}`)}
+                        className="w-full"
+                      >
+                        View Profile
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               </motion.div>

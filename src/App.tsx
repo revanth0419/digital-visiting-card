@@ -13,6 +13,7 @@ import Profile from "./pages/Profile";
 import Search from "./pages/Search";
 import PublicBook from "./pages/PublicBook";
 import NotFound from "./pages/NotFound";
+import HowToUse from "./pages/HowToUse";
 import RedirectToProfile from "./components/auth/RedirectToProfile";
 
 const queryClient = new QueryClient();
@@ -87,6 +88,7 @@ const AnimatedRoutes = () => {
             <PublicBook />
           </motion.div>
         } />
+        <Route path="/how-to-use" element={<HowToUse />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AnimatePresence>

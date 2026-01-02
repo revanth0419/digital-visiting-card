@@ -349,8 +349,8 @@ const Auth = () => {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
           >
-            <Zap className="w-10 h-10 text-primary" />
-            <h1 className="text-4xl font-bold text-gradient">Prism Link Spot</h1>
+            <img src="/dvc-logo.jpg" alt="Digital Visiting Card Logo" className="w-10 h-10 object-contain" />
+            <h1 className="text-4xl font-bold text-gradient">Digital Visiting Card</h1>
           </motion.div>
           <motion.p
             className="text-muted-foreground"
@@ -358,23 +358,11 @@ const Auth = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            Your personal link hub with style
+            Your smart digital link hub. Share all your important links in one beautiful place for free.
           </motion.p>
         </div>
 
-        {/* Animated Character */}
-        <motion.div
-          className="flex justify-center mb-6"
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.4, type: "spring", stiffness: 150 }}
-        >
-          <AnimatedCharacter
-            expression={expression}
-            cursorPosition={cursorPosition}
-            isTypingPassword={isTypingPassword}
-          />
-        </motion.div>
+        {/* Animated Character Removed */}
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}

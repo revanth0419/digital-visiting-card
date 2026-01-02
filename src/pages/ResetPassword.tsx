@@ -81,8 +81,8 @@ const ResetPassword = () => {
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Zap className="w-10 h-10 text-primary" />
-            <h1 className="text-4xl font-bold text-gradient">Prism Link Spot</h1>
+            <img src="/dvc-logo.jpg" alt="Digital Visiting Card Logo" className="w-10 h-10 object-contain" />
+            <h1 className="text-3xl font-bold text-gradient">Digital Visiting Card</h1>
           </div>
           <p className="text-muted-foreground">Set your new password</p>
         </div>

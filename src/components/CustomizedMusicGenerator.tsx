@@ -34,7 +34,7 @@ const CustomizedMusicGenerator = () => {
     setErrorState(null);
     setTrackInfo(null);
     const trimmedPrompt = prompt.trim();
-    
+
     if (!trimmedPrompt || trimmedPrompt.length < 5) {
       toast({ title: "Prompt too short", description: "Please describe the music you want (at least 5 characters).", variant: "destructive" });
       return;
@@ -53,11 +53,11 @@ const CustomizedMusicGenerator = () => {
           "Content-Type": "application/json",
           ...(accessToken && { "Authorization": `Bearer ${accessToken}` }),
         },
-        body: JSON.stringify({ 
-          prompt: trimmedPrompt, 
-          duration: clampDuration(duration), 
+        body: JSON.stringify({
+          prompt: trimmedPrompt,
+          duration: clampDuration(duration),
           genre,
-          mood 
+          mood
         }),
       });
 
@@ -93,7 +93,7 @@ const CustomizedMusicGenerator = () => {
           for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
           finalBlob = new Blob([array], { type: mime });
           finalExtension = mime.includes("wav") ? "wav" : "mp3";
-          
+
           // Store track info
           if (data.title || data.description) {
             setTrackInfo({ title: data.title, description: data.description });
@@ -115,9 +115,10 @@ const CustomizedMusicGenerator = () => {
         throw new Error("No audio data received");
       }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[Music] error", err);
-      setErrorState(err.message || "Failed to generate music");
+      const message = err instanceof Error ? err.message : "Failed to generate music";
+      setErrorState(message);
     } finally {
       setLoading(false);
     }

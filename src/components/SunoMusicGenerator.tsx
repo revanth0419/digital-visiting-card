@@ -182,8 +182,9 @@ const SunoMusicGenerator = () => {
       if (data?.lyrics) setLyrics(data.lyrics);
 
       toast({ title: "Song generated successfully 🎵" });
-    } catch (e: any) {
-      setErrorState(e.message || "Generation failed");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Generation failed";
+      setErrorState(message);
     } finally {
       setLoading(false);
     }

@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ExternalLink, Zap, Video, QrCode, ChevronDown, Link2, ShoppingBag, Image as ImageIcon, UserPlus, UserCheck, BookOpen, Music4 } from "lucide-react";
+import { ExternalLink, Zap, Video, QrCode, ChevronDown, Link2, ShoppingBag, Image as ImageIcon, BookOpen, Music4 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ConnectButton } from "@/components/profile/ConnectButton";
 
 type Profile = {
   id: string;
@@ -179,7 +180,7 @@ const Profile = () => {
 
       if (mediaData) {
         setMedia(mediaData as Media[]);
-        
+
         const urls: Record<string, string> = {};
         for (const item of mediaData) {
           const path = extractStoragePath(item.url) || item.url;
@@ -285,11 +286,11 @@ const Profile = () => {
         transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
       >
         <motion.div
-          animate={{ 
+          animate={{
             rotate: [0, -10, 10, -10, 0],
             scale: [1, 1.1, 1.1, 1.1, 1]
           }}
-          transition={{ 
+          transition={{
             duration: 2,
             ease: "easeInOut",
             times: [0, 0.2, 0.4, 0.6, 1],
@@ -311,8 +312,8 @@ const Profile = () => {
   // Render a section of links (either regular or shopping)
   const renderLinkSection = (sectionLinks: Link[], sectionTitle: string) => {
     const isShoppingSection = sectionTitle === "Shop";
-    const displayedLinks = isShoppingSection && !showAllProducts 
-      ? sectionLinks.slice(0, 3) 
+    const displayedLinks = isShoppingSection && !showAllProducts
+      ? sectionLinks.slice(0, 3)
       : sectionLinks;
     const hasMoreProducts = isShoppingSection && sectionLinks.length > 3;
 
@@ -331,8 +332,8 @@ const Profile = () => {
                   initial={{ opacity: 0, y: 30, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -30, scale: 0.95 }}
-                  transition={{ 
-                    duration: 0.4, 
+                  transition={{
+                    duration: 0.4,
                     delay: index * 0.08,
                     ease: [0.23, 1, 0.32, 1]
                   }}
@@ -340,7 +341,7 @@ const Profile = () => {
                 >
                   <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl overflow-hidden border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 relative group">
                     {/* Gradient Border Effect on Hover */}
-                    <div 
+                    <div
                       className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"
                       style={{
                         background: `linear-gradient(135deg, ${themeColor}80, transparent)`,
@@ -348,20 +349,20 @@ const Profile = () => {
                         transform: "scale(1.05)"
                       }}
                     />
-                    
+
                     <CardContent className="p-0">
                       {link.image_url ? (
                         <div className="relative overflow-hidden aspect-video">
-                          <img 
-                            src={link.image_url} 
-                            alt={link.title} 
+                          <img
+                            src={link.image_url}
+                            alt={link.title}
                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                             loading="lazy"
                           />
                           {/* Overlay with gradient on hover */}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             <div className="absolute bottom-4 left-4">
-                              <div 
+                              <div
                                 className="w-12 h-12 rounded-2xl backdrop-blur-sm flex items-center justify-center"
                                 style={{ backgroundColor: `${themeColor}40` }}
                               >
@@ -381,7 +382,7 @@ const Profile = () => {
                               {link.title}
                             </h4>
                             {link.price && (
-                              <p 
+                              <p
                                 className="text-2xl font-bold mt-3"
                                 style={{ color: themeColor }}
                               >
@@ -390,7 +391,7 @@ const Profile = () => {
                             )}
                           </div>
                           {!link.image_url && (
-                            <div 
+                            <div
                               className="w-10 h-10 rounded-xl flex items-center justify-center opacity-60 group-hover:opacity-100 transition-all duration-300"
                               style={{ backgroundColor: `${themeColor}20` }}
                             >
@@ -406,7 +407,7 @@ const Profile = () => {
             </AnimatePresence>
           </div>
           {hasMoreProducts && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="flex justify-center mt-8"
@@ -448,27 +449,27 @@ const Profile = () => {
                   whileHover={{ x: 6, transition: { duration: 0.15 } }}
                 >
                   <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-2xl overflow-hidden border border-white/20 shadow-md hover:shadow-xl transition-all duration-200 relative">
-                    <div 
+                    <div
                       className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10"
                       style={{
                         background: `linear-gradient(90deg, ${themeColor}30, transparent)`,
                         filter: "blur(10px)"
                       }}
                     />
-                    
+
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
                         {link.image_url ? (
                           <div className="relative overflow-hidden rounded-xl flex-shrink-0 h-14 w-14">
-                            <img 
-                              src={link.image_url} 
-                              alt={link.title} 
+                            <img
+                              src={link.image_url}
+                              alt={link.title}
                               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                               loading="lazy"
                             />
                           </div>
                         ) : link.icon ? (
-                          <div 
+                          <div
                             className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
                             style={{ backgroundColor: `${themeColor}20` }}
                           >
@@ -485,7 +486,7 @@ const Profile = () => {
                             </p>
                           )}
                         </div>
-                        <div 
+                        <div
                           className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 opacity-40 group-hover:opacity-100 transition-all duration-200"
                           style={{ backgroundColor: `${themeColor}20` }}
                         >
@@ -499,7 +500,7 @@ const Profile = () => {
             </AnimatePresence>
           </div>
           {hasMoreProducts && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="flex justify-center mt-6"
@@ -542,25 +543,25 @@ const Profile = () => {
               >
                 <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl overflow-hidden border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-300 relative">
                   {/* Gradient glow on hover */}
-                  <div 
+                  <div
                     className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"
                     style={{
                       background: `linear-gradient(90deg, ${themeColor}40, transparent)`,
                       filter: "blur(15px)"
                     }}
                   />
-                  
+
                   <CardContent className="p-5">
                     <div className="flex items-center gap-5">
                       {link.image_url && (
                         <div className="relative overflow-hidden rounded-2xl flex-shrink-0 h-24 w-24">
-                          <img 
-                            src={link.image_url} 
-                            alt={link.title} 
+                          <img
+                            src={link.image_url}
+                            alt={link.title}
                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                             loading="lazy"
                           />
-                          <div 
+                          <div
                             className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center"
                             style={{ background: `linear-gradient(135deg, ${themeColor}60, ${themeColor}30)` }}
                           >
@@ -579,7 +580,7 @@ const Profile = () => {
                             </span>
                           </div>
                           {link.price && (
-                            <span 
+                            <span
                               className="text-2xl font-bold"
                               style={{ color: themeColor }}
                             >
@@ -588,7 +589,7 @@ const Profile = () => {
                           )}
                         </div>
                         {!link.image_url && (
-                          <div 
+                          <div
                             className="w-12 h-12 rounded-2xl flex items-center justify-center ml-4 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-all duration-300"
                             style={{ backgroundColor: `${themeColor}20` }}
                           >
@@ -604,7 +605,7 @@ const Profile = () => {
           </AnimatePresence>
         </div>
         {hasMoreProducts && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="flex justify-center mt-8"
@@ -664,8 +665,8 @@ const Profile = () => {
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ 
-                    duration: 0.5, 
+                  transition={{
+                    duration: 0.5,
                     delay: index * 0.1,
                     ease: [0.23, 1, 0.32, 1]
                   }}
@@ -675,7 +676,7 @@ const Profile = () => {
                 >
                   <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl overflow-hidden border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300">
                     {/* Glow effect on hover */}
-                    <div 
+                    <div
                       className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"
                       style={{
                         background: `linear-gradient(135deg, ${themeColor}60, transparent)`,
@@ -683,7 +684,7 @@ const Profile = () => {
                         transform: "scale(1.1)"
                       }}
                     />
-                    
+
                     {item.type === "image" ? (
                       <img
                         src={mediaUrl}
@@ -698,7 +699,7 @@ const Profile = () => {
                           className="w-full h-auto object-cover"
                           preload="metadata"
                         />
-                        <div 
+                        <div
                           className="absolute inset-0 flex items-center justify-center backdrop-blur-sm"
                           style={{ background: `${themeColor}40` }}
                         >
@@ -712,7 +713,7 @@ const Profile = () => {
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Overlay with title */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
                       <div className="absolute bottom-0 left-0 right-0 p-4">
@@ -749,10 +750,10 @@ const Profile = () => {
       {profile.background_url && profile.background_type === "image" && (
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60 backdrop-blur-sm"></div>
       )}
-      
+
       <div className="relative max-w-5xl mx-auto px-4 py-8 md:py-16">
         {/* Profile Header - Card Style with Glassmorphism */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
@@ -766,16 +767,16 @@ const Profile = () => {
               transition={{ delay: 0.2, duration: 0.5 }}
               className="relative inline-block mb-6"
             >
-              <div 
+              <div
                 className="absolute inset-0 rounded-full blur-2xl opacity-60 animate-pulse"
-                style={{ 
+                style={{
                   background: `linear-gradient(135deg, ${themeColor}, ${themeColor}80)`,
                   transform: "scale(1.1)"
                 }}
               />
-              <Avatar 
-                className="w-32 h-32 md:w-40 md:h-40 relative border-4 border-white/30 shadow-2xl hover:scale-105 transition-all duration-300" 
-                style={{ 
+              <Avatar
+                className="w-32 h-32 md:w-40 md:h-40 relative border-4 border-white/30 shadow-2xl hover:scale-105 transition-all duration-300"
+                style={{
                   borderColor: `${themeColor}40`,
                   boxShadow: `0 0 40px ${themeColor}60`
                 }}
@@ -792,11 +793,11 @@ const Profile = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.5 }}
             >
-              <h1 
+              <h1
                 className={`text-3xl md:text-5xl font-bold mb-3 ${getTextColor()}`}
-                style={{ 
-                  textShadow: profileTheme === "dark" || profileTheme === "gradient" 
-                    ? "0 2px 20px rgba(0,0,0,0.5)" 
+                style={{
+                  textShadow: profileTheme === "dark" || profileTheme === "gradient"
+                    ? "0 2px 20px rgba(0,0,0,0.5)"
                     : "0 2px 10px rgba(255,255,255,0.3)"
                 }}
               >
@@ -812,76 +813,12 @@ const Profile = () => {
 
               {/* Subscribe Button (only show if viewing someone else's profile and logged in) */}
               {currentUserId && profile.user_id && currentUserId !== profile.user_id && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5, duration: 0.5 }}
-                  className="mb-4"
-                >
-                  <Button
-                    size="lg"
-                    variant={isSubscribed ? "secondary" : "default"}
-                    onClick={async () => {
-                      try {
-                        if (isSubscribed) {
-                          const { error } = await supabase
-                            .from("subscriptions")
-                            .delete()
-                            .eq("subscriber_id", currentUserId)
-                            .eq("subscribed_to_id", profile.user_id);
-
-                          if (error) throw error;
-                          setIsSubscribed(false);
-                          toast({
-                            title: "Unsubscribed",
-                            description: `You will no longer receive updates from ${profile.display_name || profile.username}`,
-                          });
-                        } else {
-                          const { error } = await supabase
-                            .from("subscriptions")
-                            .insert({
-                              subscriber_id: currentUserId,
-                              subscribed_to_id: profile.user_id
-                            });
-
-                          if (error) throw error;
-                          setIsSubscribed(true);
-                          toast({
-                            title: "Subscribed!",
-                            description: `You'll be notified when ${profile.display_name || profile.username} adds new content`,
-                          });
-                        }
-                      } catch (error) {
-                        console.error("Error toggling subscription:", error);
-                        toast({
-                          title: "Error",
-                          description: "Failed to update subscription",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                    className="rounded-2xl px-8 h-12 font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
-                    style={{
-                      background: isSubscribed 
-                        ? "rgba(255, 255, 255, 0.1)"
-                        : `linear-gradient(135deg, ${themeColor}, ${themeColor}dd)`,
-                      color: isSubscribed ? themeColor : "white",
-                      border: isSubscribed ? `2px solid ${themeColor}` : "none"
-                    }}
-                  >
-                    {isSubscribed ? (
-                      <>
-                        <UserCheck className="w-5 h-5 mr-2" />
-                        Subscribed
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="w-5 h-5 mr-2" />
-                        Subscribe
-                      </>
-                    )}
-                  </Button>
-                </motion.div>
+                <ConnectButton
+                  targetUserId={profile.user_id}
+                  initialIsConnected={isSubscribed}
+                  onConnectionChange={(connected) => setIsSubscribed(connected)}
+                  className="mb-8"
+                />
               )}
 
               {/* QR Code Button with Pulse Effect */}
@@ -893,7 +830,7 @@ const Profile = () => {
                   size="lg"
                   onClick={() => setShowQR(true)}
                   className="gap-2 rounded-2xl px-6 py-6 font-semibold text-base relative overflow-hidden group"
-                  style={{ 
+                  style={{
                     background: `linear-gradient(135deg, ${themeColor}, ${themeColor}dd)`,
                     color: "white",
                     border: "2px solid rgba(255,255,255,0.2)",
@@ -910,7 +847,7 @@ const Profile = () => {
         </motion.div>
 
         {/* Modern Pill-Style Tabs with Icons */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.5 }}
@@ -939,51 +876,46 @@ const Profile = () => {
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               />
-              
+
               {/* Tab Buttons */}
               <button
                 onClick={() => setActiveTab("links")}
-                className={`relative z-10 py-3 px-2 rounded-2xl font-semibold text-xs transition-colors duration-300 flex items-center justify-center gap-1 ${
-                  activeTab === "links" ? "text-white" : `${getTextColor()} opacity-60`
-                }`}
+                className={`relative z-10 py-3 px-2 rounded-2xl font-semibold text-xs transition-colors duration-300 flex items-center justify-center gap-1 ${activeTab === "links" ? "text-white" : `${getTextColor()} opacity-60`
+                  }`}
               >
                 <Link2 className="w-4 h-4" />
                 <span className="hidden sm:inline">Links</span>
               </button>
-              
+
               <button
                 onClick={() => setActiveTab("shop")}
-                className={`relative z-10 py-3 px-2 rounded-2xl font-semibold text-xs transition-colors duration-300 flex items-center justify-center gap-1 ${
-                  activeTab === "shop" ? "text-white" : `${getTextColor()} opacity-60`
-                }`}
+                className={`relative z-10 py-3 px-2 rounded-2xl font-semibold text-xs transition-colors duration-300 flex items-center justify-center gap-1 ${activeTab === "shop" ? "text-white" : `${getTextColor()} opacity-60`
+                  }`}
               >
                 <ShoppingBag className="w-4 h-4" />
                 <span className="hidden sm:inline">Shop</span>
               </button>
-              
+
               <button
                 onClick={() => setActiveTab("gallery")}
-                className={`relative z-10 py-3 px-2 rounded-2xl font-semibold text-xs transition-colors duration-300 flex items-center justify-center gap-1 ${
-                  activeTab === "gallery" ? "text-white" : `${getTextColor()} opacity-60`
-                }`}
+                className={`relative z-10 py-3 px-2 rounded-2xl font-semibold text-xs transition-colors duration-300 flex items-center justify-center gap-1 ${activeTab === "gallery" ? "text-white" : `${getTextColor()} opacity-60`
+                  }`}
               >
                 <ImageIcon className="w-4 h-4" />
                 <span className="hidden sm:inline">Gallery</span>
               </button>
               <button
                 onClick={() => setActiveTab("books")}
-                className={`relative z-10 py-3 px-2 rounded-2xl font-semibold text-xs transition-colors duration-300 flex items-center justify-center gap-1 ${
-                  activeTab === "books" ? "text-white" : `${getTextColor()} opacity-60`
-                }`}
+                className={`relative z-10 py-3 px-2 rounded-2xl font-semibold text-xs transition-colors duration-300 flex items-center justify-center gap-1 ${activeTab === "books" ? "text-white" : `${getTextColor()} opacity-60`
+                  }`}
               >
                 <BookOpen className="w-4 h-4" />
                 <span className="hidden sm:inline">Books</span>
               </button>
               <button
                 onClick={() => setActiveTab("music")}
-                className={`relative z-10 py-3 px-2 rounded-2xl font-semibold text-xs transition-colors duration-300 flex items-center justify-center gap-1 ${
-                  activeTab === "music" ? "text-white" : `${getTextColor()} opacity-60`
-                }`}
+                className={`relative z-10 py-3 px-2 rounded-2xl font-semibold text-xs transition-colors duration-300 flex items-center justify-center gap-1 ${activeTab === "music" ? "text-white" : `${getTextColor()} opacity-60`
+                  }`}
               >
                 <Music4 className="w-4 h-4" />
                 <span className="hidden sm:inline">Music</span>
@@ -1056,234 +988,234 @@ const Profile = () => {
             </motion.div>
           )}
 
-        {activeTab === "books" && (
-          <motion.div
-            key="books"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-4"
-          >
-            {books.length === 0 ? (
-              <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-12 text-center border border-white/20">
-                <motion.div
-                  initial={{ opacity: 0, y: 30, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
-                >
+          {activeTab === "books" && (
+            <motion.div
+              key="books"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-4"
+            >
+              {books.length === 0 ? (
+                <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-12 text-center border border-white/20">
                   <motion.div
-                    animate={{ 
-                      rotate: [0, -5, 5, -5, 0],
-                      scale: [1, 1.05, 1.05, 1.05, 1]
-                    }}
-                    transition={{ 
-                      duration: 2,
-                      ease: "easeInOut",
-                      times: [0, 0.2, 0.4, 0.6, 1],
-                      repeat: Infinity,
-                      repeatDelay: 3
-                    }}
-                    className="text-8xl mb-6 inline-block"
+                    initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
                   >
-                    📚
-                  </motion.div>
-                  <h3 className={`text-2xl font-bold mb-3 ${getTextColor()}`}>No books yet</h3>
-                  <p className={`text-base ${getTextColor()} opacity-70 max-w-md mx-auto`}>
-                    This user hasn't created any books yet.
-                  </p>
-                </motion.div>
-              </div>
-            ) : (
-              <div className={`grid gap-6 ${layoutStyle === "grid" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-                <AnimatePresence>
-                  {books.map((book, index) => (
-                    <motion.a
-                      key={book.id}
-                      href={`/books/${book.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block group"
-                      initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -30, scale: 0.95 }}
-                      transition={{ 
-                        duration: 0.4, 
-                        delay: index * 0.08,
-                        ease: [0.23, 1, 0.32, 1]
+                    <motion.div
+                      animate={{
+                        rotate: [0, -5, 5, -5, 0],
+                        scale: [1, 1.05, 1.05, 1.05, 1]
                       }}
-                      whileHover={{ y: -8, transition: { duration: 0.2 } }}
+                      transition={{
+                        duration: 2,
+                        ease: "easeInOut",
+                        times: [0, 0.2, 0.4, 0.6, 1],
+                        repeat: Infinity,
+                        repeatDelay: 3
+                      }}
+                      className="text-8xl mb-6 inline-block"
                     >
-                      <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl overflow-hidden border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 relative group">
-                        <div 
-                          className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"
-                          style={{
-                            background: `linear-gradient(135deg, ${themeColor}80, transparent)`,
-                            filter: "blur(20px)",
-                            transform: "scale(1.05)"
-                          }}
-                        />
-                        
-                        <div className="p-0">
-                          {book.cover_image_url ? (
-                            <div className="relative overflow-hidden aspect-[3/4] max-h-48">
-                              <img 
-                                src={book.cover_image_url} 
-                                alt={book.title} 
-                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                loading="lazy"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <div className="absolute bottom-4 left-4">
-                                  <div 
-                                    className="w-10 h-10 rounded-xl backdrop-blur-sm flex items-center justify-center"
-                                    style={{ backgroundColor: `${themeColor}40` }}
-                                  >
-                                    <BookOpen className="w-5 h-5 text-white" />
+                      📚
+                    </motion.div>
+                    <h3 className={`text-2xl font-bold mb-3 ${getTextColor()}`}>No books yet</h3>
+                    <p className={`text-base ${getTextColor()} opacity-70 max-w-md mx-auto`}>
+                      This user hasn't created any books yet.
+                    </p>
+                  </motion.div>
+                </div>
+              ) : (
+                <div className={`grid gap-6 ${layoutStyle === "grid" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+                  <AnimatePresence>
+                    {books.map((book, index) => (
+                      <motion.a
+                        key={book.id}
+                        href={`/books/${book.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block group"
+                        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -30, scale: 0.95 }}
+                        transition={{
+                          duration: 0.4,
+                          delay: index * 0.08,
+                          ease: [0.23, 1, 0.32, 1]
+                        }}
+                        whileHover={{ y: -8, transition: { duration: 0.2 } }}
+                      >
+                        <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl overflow-hidden border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 relative group">
+                          <div
+                            className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"
+                            style={{
+                              background: `linear-gradient(135deg, ${themeColor}80, transparent)`,
+                              filter: "blur(20px)",
+                              transform: "scale(1.05)"
+                            }}
+                          />
+
+                          <div className="p-0">
+                            {book.cover_image_url ? (
+                              <div className="relative overflow-hidden aspect-[3/4] max-h-48">
+                                <img
+                                  src={book.cover_image_url}
+                                  alt={book.title}
+                                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                  loading="lazy"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                  <div className="absolute bottom-4 left-4">
+                                    <div
+                                      className="w-10 h-10 rounded-xl backdrop-blur-sm flex items-center justify-center"
+                                      style={{ backgroundColor: `${themeColor}40` }}
+                                    >
+                                      <BookOpen className="w-5 h-5 text-white" />
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          ) : (
-                            <div 
-                              className="aspect-[3/4] max-h-48 flex items-center justify-center"
-                              style={{ background: `linear-gradient(135deg, ${themeColor}40, ${themeColor}20)` }}
-                            >
-                              <BookOpen className="w-16 h-16" style={{ color: themeColor }} />
-                            </div>
-                          )}
-                          <div className="p-5">
-                            <h4 className={`font-bold text-lg ${getTextColor()} mb-2 line-clamp-2 group-hover:text-blue-300 transition-colors`}>
-                              {book.title}
-                            </h4>
-                            {book.description && (
-                              <p className={`text-sm ${getTextColor()} opacity-70 line-clamp-2`}>
-                                {book.description}
+                            ) : (
+                              <div
+                                className="aspect-[3/4] max-h-48 flex items-center justify-center"
+                                style={{ background: `linear-gradient(135deg, ${themeColor}40, ${themeColor}20)` }}
+                              >
+                                <BookOpen className="w-16 h-16" style={{ color: themeColor }} />
+                              </div>
+                            )}
+                            <div className="p-5">
+                              <h4 className={`font-bold text-lg ${getTextColor()} mb-2 line-clamp-2 group-hover:text-blue-300 transition-colors`}>
+                                {book.title}
+                              </h4>
+                              {book.description && (
+                                <p className={`text-sm ${getTextColor()} opacity-70 line-clamp-2`}>
+                                  {book.description}
+                                </p>
+                              )}
+                              <p className="text-xs mt-3 opacity-50" style={{ color: themeColor }}>
+                                {book.created_at ? new Date(book.created_at).toLocaleDateString() : "Recently created"}
                               </p>
-                            )}
-                            <p className="text-xs mt-3 opacity-50" style={{ color: themeColor }}>
-                              {book.created_at ? new Date(book.created_at).toLocaleDateString() : "Recently created"}
-                            </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </motion.a>
-                  ))}
-                </AnimatePresence>
-              </div>
-            )}
-          </motion.div>
-        )}
+                      </motion.a>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+            </motion.div>
+          )}
 
-        {activeTab === "music" && (
-          <motion.div
-            key="music"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-4"
-          >
-            {musicTracks.length === 0 ? (
-              <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-12 text-center border border-white/20">
-                <motion.div
-                  initial={{ opacity: 0, y: 30, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
-                >
+          {activeTab === "music" && (
+            <motion.div
+              key="music"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-4"
+            >
+              {musicTracks.length === 0 ? (
+                <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-12 text-center border border-white/20">
                   <motion.div
-                    animate={{ 
-                      rotate: [0, -5, 5, -5, 0],
-                      scale: [1, 1.05, 1.05, 1.05, 1]
-                    }}
-                    transition={{ 
-                      duration: 2,
-                      ease: "easeInOut",
-                      times: [0, 0.2, 0.4, 0.6, 1],
-                      repeat: Infinity,
-                      repeatDelay: 3
-                    }}
-                    className="text-8xl mb-6 inline-block"
+                    initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
                   >
-                    🎵
-                  </motion.div>
-                  <h3 className={`text-2xl font-bold mb-3 ${getTextColor()}`}>No music yet</h3>
-                  <p className={`text-base ${getTextColor()} opacity-70 max-w-md mx-auto`}>
-                    This user hasn't shared any music tracks yet.
-                  </p>
-                </motion.div>
-              </div>
-            ) : (
-              <div className={`grid gap-6 ${layoutStyle === "grid" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-                <AnimatePresence>
-                  {musicTracks.map((track, index) => (
                     <motion.div
-                      key={track.id}
-                      className="block group"
-                      initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -30, scale: 0.95 }}
-                      transition={{ 
-                        duration: 0.4, 
-                        delay: index * 0.08,
-                        ease: [0.23, 1, 0.32, 1]
+                      animate={{
+                        rotate: [0, -5, 5, -5, 0],
+                        scale: [1, 1.05, 1.05, 1.05, 1]
                       }}
+                      transition={{
+                        duration: 2,
+                        ease: "easeInOut",
+                        times: [0, 0.2, 0.4, 0.6, 1],
+                        repeat: Infinity,
+                        repeatDelay: 3
+                      }}
+                      className="text-8xl mb-6 inline-block"
                     >
-                      <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl overflow-hidden border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 relative group">
-                        <div 
-                          className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"
-                          style={{
-                            background: `linear-gradient(135deg, ${themeColor}80, transparent)`,
-                            filter: "blur(20px)",
-                            transform: "scale(1.05)"
-                          }}
-                        />
-                        
-                        <div className="p-0">
-                          {track.cover_image_url ? (
-                            <div className="relative overflow-hidden aspect-square max-h-48">
-                              <img 
-                                src={track.cover_image_url} 
-                                alt={track.title} 
-                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                loading="lazy"
-                              />
-                            </div>
-                          ) : (
-                            <div 
-                              className="aspect-square max-h-48 flex items-center justify-center"
-                              style={{ background: `linear-gradient(135deg, ${themeColor}40, ${themeColor}20)` }}
-                            >
-                              <Music4 className="w-16 h-16" style={{ color: themeColor }} />
-                            </div>
-                          )}
-                          <div className="p-5">
-                            <h4 className={`font-bold text-lg ${getTextColor()} mb-2 line-clamp-2`}>
-                              {track.title}
-                            </h4>
-                            <p className={`text-sm ${getTextColor()} opacity-70`}>
-                              {track.genre} • {track.mood} • {track.has_vocals ? "With Vocals" : "Instrumental"}
-                            </p>
-                            {track.audio_url && (
-                              <audio controls src={track.audio_url} className="w-full mt-3 h-8" />
+                      🎵
+                    </motion.div>
+                    <h3 className={`text-2xl font-bold mb-3 ${getTextColor()}`}>No music yet</h3>
+                    <p className={`text-base ${getTextColor()} opacity-70 max-w-md mx-auto`}>
+                      This user hasn't shared any music tracks yet.
+                    </p>
+                  </motion.div>
+                </div>
+              ) : (
+                <div className={`grid gap-6 ${layoutStyle === "grid" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+                  <AnimatePresence>
+                    {musicTracks.map((track, index) => (
+                      <motion.div
+                        key={track.id}
+                        className="block group"
+                        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -30, scale: 0.95 }}
+                        transition={{
+                          duration: 0.4,
+                          delay: index * 0.08,
+                          ease: [0.23, 1, 0.32, 1]
+                        }}
+                      >
+                        <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl overflow-hidden border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 relative group">
+                          <div
+                            className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"
+                            style={{
+                              background: `linear-gradient(135deg, ${themeColor}80, transparent)`,
+                              filter: "blur(20px)",
+                              transform: "scale(1.05)"
+                            }}
+                          />
+
+                          <div className="p-0">
+                            {track.cover_image_url ? (
+                              <div className="relative overflow-hidden aspect-square max-h-48">
+                                <img
+                                  src={track.cover_image_url}
+                                  alt={track.title}
+                                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                  loading="lazy"
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                className="aspect-square max-h-48 flex items-center justify-center"
+                                style={{ background: `linear-gradient(135deg, ${themeColor}40, ${themeColor}20)` }}
+                              >
+                                <Music4 className="w-16 h-16" style={{ color: themeColor }} />
+                              </div>
                             )}
-                            <p className="text-xs mt-3 opacity-50" style={{ color: themeColor }}>
-                              {track.created_at ? new Date(track.created_at).toLocaleDateString() : "Recently created"}
-                            </p>
+                            <div className="p-5">
+                              <h4 className={`font-bold text-lg ${getTextColor()} mb-2 line-clamp-2`}>
+                                {track.title}
+                              </h4>
+                              <p className={`text-sm ${getTextColor()} opacity-70`}>
+                                {track.genre} • {track.mood} • {track.has_vocals ? "With Vocals" : "Instrumental"}
+                              </p>
+                              {track.audio_url && (
+                                <audio controls src={track.audio_url} className="w-full mt-3 h-8" />
+                              )}
+                              <p className="text-xs mt-3 opacity-50" style={{ color: themeColor }}>
+                                {track.created_at ? new Date(track.created_at).toLocaleDateString() : "Recently created"}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-            )}
-          </motion.div>
-        )}
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* Footer */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1, duration: 0.5 }}
@@ -1313,9 +1245,9 @@ const Profile = () => {
               </p>
             </DialogHeader>
             <div className="flex flex-col items-center p-6 pt-2 space-y-6">
-              <motion.div 
+              <motion.div
                 className="relative p-6 rounded-3xl border-4 shadow-2xl"
-                style={{ 
+                style={{
                   borderColor: `${themeColor}40`,
                   background: "white",
                   boxShadow: `0 20px 60px ${themeColor}30`
@@ -1323,7 +1255,7 @@ const Profile = () => {
                 whileHover={{ scale: 1.02 }}
                 transition={{ type: "spring", stiffness: 300 }}
               >
-                <div 
+                <div
                   className="absolute inset-0 rounded-3xl blur-2xl opacity-30"
                   style={{ background: themeColor }}
                 />
@@ -1358,8 +1290,8 @@ const Profile = () => {
                 initial={{ opacity: 0, scale: 0.85, rotateY: -10 }}
                 animate={{ opacity: 1, scale: 1, rotateY: 0 }}
                 exit={{ opacity: 0, scale: 0.85, rotateY: 10 }}
-                transition={{ 
-                  duration: 0.5, 
+                transition={{
+                  duration: 0.5,
                   ease: [0.23, 1, 0.32, 1]
                 }}
                 className="relative"
@@ -1401,7 +1333,7 @@ const Profile = () => {
                     </motion.div>
                   )}
                   {media.find(m => signedMediaUrls[m.id] === lightboxUrl || m.url === lightboxUrl)?.description && (
-                    <motion.p 
+                    <motion.p
                       initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.3, duration: 0.4 }}

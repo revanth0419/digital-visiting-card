@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Zap, Eye, Search as SearchIcon } from "lucide-react";
+import { LogOut, Zap, Eye, Search as SearchIcon, HelpCircle } from "lucide-react";
 
 import NotificationsDropdown from "@/components/dashboard/NotificationsDropdown";
 import ProfileEditor from "@/components/dashboard/ProfileEditor";
@@ -12,6 +12,7 @@ import LinksManager from "@/components/dashboard/LinksManager";
 import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
 import MediaManager from "@/components/dashboard/MediaManager";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { HelpModal } from "@/components/dashboard/HelpModal";
 
 const Dashboard = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -83,8 +84,10 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen gradient-mesh flex items-center justify-center">
         <div className="text-center">
-          <Zap className="w-12 h-12 text-primary animate-pulse mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading...</p>
+          <div className="text-center">
+            <img src="/dvc-logo.jpg" alt="Loading..." className="w-12 h-12 animate-pulse mx-auto mb-4 object-contain" />
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
         </div>
       </div>
     );
@@ -100,13 +103,19 @@ const Dashboard = () => {
       <header className="glass-card border-b sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Zap className="w-8 h-8 text-primary" />
-            <h1 className="text-2xl font-bold text-gradient">Prism Link Spot</h1>
+            <div className="flex items-center gap-2">
+              <img src="/dvc-logo.jpg" alt="Digital Visiting Card Logo" className="w-8 h-8 object-contain" />
+              <h1 className="text-2xl font-bold text-gradient">Digital Visiting Card</h1>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => navigate("/search")}>
               <SearchIcon className="w-5 h-5" />
+            </Button>
+
+            <Button variant="ghost" size="icon" onClick={() => navigate("/how-to-use")}>
+              <HelpCircle className="w-5 h-5" />
             </Button>
 
             <NotificationsDropdown />
@@ -149,6 +158,7 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+        <HelpModal />
       </main>
     </div>
   );

@@ -1,216 +1,154 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { Bell, Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, Check, Trash2 } from "lucide-react";
-import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api";
 
 interface Notification {
   id: string;
   type: string;
   title: string;
   message: string;
-  link: string | null;
+  link?: string;
   read: boolean;
   created_at: string;
 }
 
-export default function NotificationsDropdown() {
-  const navigate = useNavigate();
+export const NotificationsDropdown = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
   const fetchNotifications = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      const { data, error } = await apiFetch<Notification[]>("/notifications", {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
 
-      if (error) throw error;
-
-      if (data) {
-        setNotifications(data);
-        setUnreadCount(data.filter(n => !n.read).length);
+      if (!error && data) {
+        setNotifications(data || []);
+        setUnreadCount(data?.filter((n: Notification) => !n.read).length || 0);
       }
     } catch (error) {
-      console.error("Error fetching notifications:", error);
+      console.error("Failed to fetch notifications", error);
     }
   };
 
-  const markAsRead = async (notificationId: string) => {
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const markAsRead = async (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     try {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ read: true })
-        .eq("id", notificationId);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-      if (error) throw error;
+      await apiFetch(`/notifications/${id}/read`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
 
-      setNotifications(prev =>
-        prev.map(n => (n.id === notificationId ? { ...n, read: true } : n))
-      );
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error("Error marking notification as read:", error);
+      console.error("Failed to mark read", error);
     }
   };
 
-  const markAllAsRead = async () => {
+  const markAllRead = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-      const { error } = await supabase
-        .from("notifications")
-        .update({ read: true })
-        .eq("user_id", user.id);
-
-      if (error) throw error;
+      await apiFetch("/notifications/read-all", {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
 
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
-      toast.success("All notifications marked as read");
     } catch (error) {
-      console.error("Error marking all as read:", error);
-      toast.error("Failed to mark all as read");
-    }
-  };
-
-  const deleteNotification = async (notificationId: string) => {
-    try {
-      const { error } = await supabase
-        .from("notifications")
-        .delete()
-        .eq("id", notificationId);
-
-      if (error) throw error;
-
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      setUnreadCount(prev => {
-        const notification = notifications.find(n => n.id === notificationId);
-        return notification && !notification.read ? prev - 1 : prev;
-      });
-    } catch (error) {
-      console.error("Error deleting notification:", error);
-      toast.error("Failed to delete notification");
-    }
-  };
-
-  const handleNotificationClick = (notification: Notification) => {
-    if (!notification.read) {
-      markAsRead(notification.id);
-    }
-    if (notification.link) {
-      navigate(notification.link);
-      setOpen(false);
+      console.error("Failed to mark all read", error);
     }
   };
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={(val) => {
+      setOpen(val);
+      if (val) fetchNotifications();
+    }}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
-          <Bell className="w-5 h-5" />
-          <AnimatePresence>
-            {unreadCount > 0 && (
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                exit={{ scale: 0 }}
-                className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"
-              >
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </motion.span>
-            )}
-          </AnimatePresence>
+          <Bell className="h-5 w-5" />
+          {unreadCount > 0 && (
+            <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] rounded-full">
+              {unreadCount}
+            </Badge>
+          )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 max-h-[500px] overflow-y-auto">
-        <div className="flex items-center justify-between px-2 py-2 border-b">
-          <h3 className="font-semibold">Notifications</h3>
+      <DropdownMenuContent align="end" className="w-80 backdrop-blur-xl bg-background/95">
+        <DropdownMenuLabel className="flex items-center justify-between">
+          <span>Notifications</span>
           {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={markAllAsRead}
-              className="text-xs h-7"
-            >
-              <Check className="w-3 h-3 mr-1" />
+            <Button variant="ghost" size="sm" onClick={markAllRead} className="h-6 text-xs text-primary">
               Mark all read
             </Button>
           )}
-        </div>
-
-        {notifications.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-            No notifications yet
-          </div>
-        ) : (
-          <div className="py-1">
-            {notifications.map((notification) => (
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <ScrollArea className="h-[300px]">
+          {notifications.length === 0 ? (
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              No notifications
+            </div>
+          ) : (
+            notifications.map((notification) => (
               <DropdownMenuItem
                 key={notification.id}
-                className={`px-3 py-3 cursor-pointer flex items-start gap-2 ${
-                  !notification.read ? "bg-primary/5" : ""
-                }`}
-                onSelect={(e) => {
-                  e.preventDefault();
+                className={`flex flex-col items-start gap-1 p-3 cursor-pointer ${!notification.read ? "bg-accent/10" : ""}`}
+                onClick={() => {
+                  if (!notification.read) markAsRead(notification.id);
+                  if (notification.link) window.location.href = notification.link;
                 }}
               >
-                <div
-                  className="flex-1 min-w-0"
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">
-                        {notification.title}
-                      </p>
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(notification.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    {!notification.read && (
-                      <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1" />
-                    )}
-                  </div>
+                <div className="flex w-full justify-between items-start gap-2">
+                  <span className={`font-medium text-sm ${!notification.read ? "text-primary" : ""}`}>
+                    {notification.title}
+                  </span>
+                  {!notification.read && <div className="h-2 w-2 rounded-full bg-primary mt-1" />}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 flex-shrink-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteNotification(notification.id);
-                  }}
-                >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
+                <p className="text-xs text-muted-foreground w-full line-clamp-2">
+                  {notification.message}
+                </p>
+                <div className="flex items-center justify-between w-full mt-1">
+                  <span className="text-[10px] opacity-50">
+                    {new Date(notification.created_at).toLocaleDateString()}
+                  </span>
+                </div>
               </DropdownMenuItem>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </ScrollArea>
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+};
+
+export default NotificationsDropdown;

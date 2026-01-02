@@ -38,28 +38,28 @@ const PublicBook = () => {
         setLoading(false);
         return;
       }
-      
+
       try {
         setLoading(true);
         setError(null);
-        
+
         const { data, error: fetchError } = await supabase
           .from("books")
           .select("*")
           .eq("id", id)
           .single();
-        
+
         if (fetchError) {
           console.error("Error fetching book:", fetchError);
           setError("This book could not be found.");
           return;
         }
-        
+
         if (!data) {
           setError("Book not found.");
           return;
         }
-        
+
         setBook({
           id: data.id,
           title: data.title,
@@ -79,23 +79,23 @@ const PublicBook = () => {
         setLoading(false);
       }
     };
-    
+
     loadBook();
   }, [id]);
 
   // Parse pages/chapters
   const parsePages = (): { type: string; title?: string; content: string; image?: string | null }[] => {
     if (!book) return [];
-    
+
     const result: { type: string; title?: string; content: string; image?: string | null }[] = [];
-    
+
     // Add cover page
     result.push({
       type: "cover",
       content: book.title,
       image: book.coverImageUrl
     });
-    
+
     // Parse stored pages
     if (book.pages && Array.isArray(book.pages)) {
       for (const page of book.pages) {
@@ -142,14 +142,14 @@ const PublicBook = () => {
         });
       }
     }
-    
+
     // Add end page
     result.push({
       type: "end",
       content: "The End",
       image: book.endImageUrl || book.coverImageUrl
     });
-    
+
     return result;
   };
 
@@ -208,12 +208,12 @@ const PublicBook = () => {
               onError={() => setImageError(true)}
             />
           ) : null}
-          
+
           <div className="relative z-10 bg-slate-950/80 backdrop-blur-sm p-8 rounded-2xl border border-slate-700 shadow-2xl max-w-lg w-full">
             {currentPage.image && !imageError ? (
-              <img 
-                src={currentPage.image} 
-                alt="Cover" 
+              <img
+                src={currentPage.image}
+                alt="Cover"
                 className="w-full h-72 object-cover rounded-xl mb-6 shadow-lg"
                 onError={() => setImageError(true)}
               />
@@ -234,9 +234,9 @@ const PublicBook = () => {
         <div className="h-full w-full bg-[#faf9f6] text-slate-900 overflow-y-auto">
           <div className="max-w-3xl mx-auto p-6 md:p-10">
             {currentPage.image && (
-              <img 
-                src={currentPage.image} 
-                alt={currentPage.title} 
+              <img
+                src={currentPage.image}
+                alt={currentPage.title}
                 className="w-full h-48 md:h-64 object-cover rounded-xl mb-6 shadow-md"
               />
             )}
@@ -292,8 +292,8 @@ const PublicBook = () => {
       <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <BookOpen className="w-5 h-5 text-primary" />
-            <span className="font-bold text-lg text-gradient">Prism Link Spot</span>
+            <img src="/dvc-logo.jpg" alt="Digital Visiting Card Logo" className="w-8 h-8 object-contain" />
+            <h1 className="text-2xl font-bold text-gradient">Digital Visiting Card</h1>
           </Link>
           <Link to="/auth">
             <Button variant="outline" size="sm">Sign In</Button>

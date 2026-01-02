@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadRateLimiter } from "@/lib/rate-limit";
+import { apiFetch } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,7 +80,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
 
       if (error) throw error;
       setMedia((data as Media[]) || []);
-      
+
       // Generate signed URLs for all media
       const urls: Record<string, string> = {};
       if (data) {
@@ -118,7 +119,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
 
     const isImage = file.type.startsWith('image/');
     const isVideo = file.type.startsWith('video/');
-    
+
     if (!isImage && !isVideo) {
       toast({
         title: "Invalid file",
@@ -186,17 +187,22 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
 
       if (uploadError) throw uploadError;
 
-      // Add to database
-      const { error: insertError } = await supabase.from("media").insert({
-        profile_id: profileId,
-        type: isImage ? 'image' : 'video',
-        url: filePath,
-        title: title.trim(),
-        description: description.trim() || null,
-        order_index: media.length,
+      // Add to database via API (triggers notification)
+      const { error: insertError } = await apiFetch("/media", {
+        method: "POST",
+        body: JSON.stringify({
+          type: isImage ? 'image' : 'video',
+          url: filePath,
+          title: title.trim(),
+          description: description.trim() || null,
+          order_index: media.length,
+        }),
+        headers: {
+          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        }
       });
 
-      if (insertError) throw insertError;
+      if (insertError) throw new Error(insertError);
 
       setUploadProgress(100);
 
