@@ -9,7 +9,7 @@ const HowToUse = () => {
         {
             icon: <UserPlus className="w-8 h-8 text-primary" />,
             title: "1. Create Account",
-            description: "Sign up for a free account. Choose a unique username that will be part of your personal URL (e.g., dvc.vinofyx.com/u/yourname)."
+            description: "Sign up for a free account. Choose a unique username that will be part of your personal URL (e.g., dvc.vinofyx.com/yourname)."
         },
         {
             icon: <Settings className="w-8 h-8 text-secondary" />,
@@ -29,7 +29,7 @@ const HowToUse = () => {
         {
             icon: <Share2 className="w-8 h-8 text-green-500" />,
             title: "5. Share Your Link",
-            description: "Copy your unique profile URL or download your QR code to share on Instagram, TikTok, and other platforms."
+            description: "Copy your unique profile URL or download your QR code to share on WhatsApp, Instagram and other platforms."
         }
     ];
 

@@ -16,10 +16,12 @@ const Index = () => {
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-12 md:py-20 text-center">
         <div className="max-w-4xl mx-auto animate-fade-in">
-          <div className="flex items-center justify-center gap-3 mb-6 animate-bounce-in">
-            <img src="/dvc-logo.jpg" alt="Digital Visiting Card Logo" className="w-16 h-16 md:w-20 md:h-20 object-contain" />
+          <div className="flex items-center justify-center gap-3 mb-8 animate-bounce-in">
+            <div className="p-6 rounded-[2rem] bg-black backdrop-blur-lg border border-primary/20 shadow-[0_0_30px_hsl(var(--primary)/0.2)]">
+              <img src="/dvc-logo.jpg" alt="Digital Visiting Card Logo" className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-glow" />
+            </div>
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 text-gradient animate-slide-up">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 text-gradient animate-slide-up pb-4 leading-tight">
             Digital Visiting Card
           </h1>
           <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto animate-fade-up">
