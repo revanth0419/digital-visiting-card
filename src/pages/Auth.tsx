@@ -10,6 +10,7 @@ import { Zap, Eye, EyeOff, Check, X } from "lucide-react";
 import { motion } from "framer-motion";
 import FloatingBackground from "@/components/auth/FloatingBackground";
 import AnimatedCharacter from "@/components/auth/AnimatedCharacter";
+import { DVCLogo } from "@/components/ui/DVCLogo";
 
 type Expression = "neutral" | "happy" | "sad" | "shocked";
 
@@ -349,7 +350,7 @@ const Auth = () => {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
           >
-            <img src="/dvc-logo.jpg" alt="Digital Visiting Card Logo" className="w-10 h-10 object-contain" />
+            <DVCLogo className="w-10 h-10 text-primary" />
             <h1 className="text-4xl font-bold text-gradient">Digital Visiting Card</h1>
           </motion.div>
           <motion.p

@@ -13,6 +13,7 @@ import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
 import MediaManager from "@/components/dashboard/MediaManager";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { HelpModal } from "@/components/dashboard/HelpModal";
+import { DVCLogo } from "@/components/ui/DVCLogo";
 
 const Dashboard = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -85,7 +86,7 @@ const Dashboard = () => {
       <div className="min-h-screen gradient-mesh flex items-center justify-center">
         <div className="text-center">
           <div className="text-center">
-            <img src="/dvc-logo.jpg" alt="Loading..." className="w-12 h-12 animate-pulse mx-auto mb-4 object-contain" />
+            <DVCLogo className="w-12 h-12 animate-pulse mx-auto mb-4 text-primary" />
             <p className="text-muted-foreground">Loading...</p>
           </div>
         </div>
@@ -104,7 +105,7 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2">
-              <img src="/dvc-logo.jpg" alt="Digital Visiting Card Logo" className="w-8 h-8 object-contain" />
+              <DVCLogo className="w-8 h-8 text-primary" />
               <h1 className="text-2xl font-bold text-gradient">Digital Visiting Card</h1>
             </div>
           </div>

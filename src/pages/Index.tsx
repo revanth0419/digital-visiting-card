@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Zap, Link as LinkIcon, QrCode, Sparkles } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ScrollToTop } from "@/components/ui/ScrollToTop";
+import { DVCLogo } from "@/components/ui/DVCLogo";
 
 const Index = () => {
   return (
@@ -16,9 +17,9 @@ const Index = () => {
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-12 md:py-20 text-center">
         <div className="max-w-4xl mx-auto animate-fade-in">
-          <div className="flex items-center justify-center gap-3 mb-8 animate-bounce-in">
-            <div className="p-6 rounded-[2rem] bg-black backdrop-blur-lg border border-primary/20 shadow-[0_0_30px_hsl(var(--primary)/0.2)]">
-              <img src="/dvc-logo.jpg" alt="Digital Visiting Card Logo" className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-glow" />
+          <div className="flex items-center justify-center gap-3 mb-2 mt-12 animate-bounce-in">
+            <div className="p-0">
+              <DVCLogo className="w-24 h-24 md:w-32 md:h-32 drop-shadow-xl" />
             </div>
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 text-gradient animate-slide-up pb-4 leading-tight">
@@ -114,7 +115,7 @@ const Index = () => {
       <footer className="border-t border-border/50 py-8">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <img src="/dvc-logo.jpg" alt="Digital Visiting Card Logo" className="w-6 h-6 object-contain" />
+            <DVCLogo className="w-6 h-6 text-primary" />
             <span className="font-semibold">Digital Visiting Card</span>
           </div>
           <div className="mb-4">
