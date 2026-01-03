@@ -26,7 +26,7 @@ const Index = () => {
             Digital Visiting Card
           </h1>
           <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto animate-fade-up">
-            Your smart digital link hub. Share all your important links in one beautiful place for free.
+            Your smart digital link hub. Share all your important links in one beautiful place — free for a limited-time launch offer.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
             <Link to="/auth?mode=signup">
