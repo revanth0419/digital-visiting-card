@@ -351,7 +351,7 @@ const Auth = () => {
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
           >
             <DVCLogo className="w-10 h-10 text-primary" />
-            <h1 className="text-4xl font-bold text-gradient">Digital Visiting Card</h1>
+            <h1 className="text-4xl font-bold text-gradient pb-1">Digital Visiting Card</h1>
           </motion.div>
           <motion.p
             className="text-muted-foreground"
