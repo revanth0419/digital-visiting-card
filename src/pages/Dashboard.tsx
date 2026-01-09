@@ -14,6 +14,15 @@ import MediaManager from "@/components/dashboard/MediaManager";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { HelpModal } from "@/components/dashboard/HelpModal";
 import { DVCLogo } from "@/components/ui/DVCLogo";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Menu } from "lucide-react";
 
 const Dashboard = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -102,27 +111,27 @@ const Dashboard = () => {
     <div className="min-h-screen gradient-mesh">
       {/* Header */}
       <header className="glass-card border-b sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          {/* Logo Section */}
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
-              <DVCLogo className="w-8 h-8 text-primary" />
-              <h1 className="text-2xl font-bold text-gradient">Digital Visiting Card</h1>
-            </div>
+            <DVCLogo className="w-8 h-8 text-primary" />
+            <h1 className="text-xl md:text-2xl font-bold text-gradient">Digital Visiting Card</h1>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/search")}>
+          {/* Desktop Actions */}
+          <div className="hidden md:flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/search")} title="Search">
               <SearchIcon className="w-5 h-5" />
             </Button>
 
-            <Button variant="ghost" size="icon" onClick={() => navigate("/how-to-use")}>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/how-to-use")} title="Help">
               <HelpCircle className="w-5 h-5" />
             </Button>
 
             <NotificationsDropdown />
             <ThemeToggle />
 
-
+            <div className="h-6 w-px bg-border mx-2" />
 
             <Button variant="outline" size="sm" onClick={handleViewProfile}>
               <Eye className="w-4 h-4 mr-2" />
@@ -133,6 +142,41 @@ const Dashboard = () => {
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
+          </div>
+
+          {/* Mobile Actions */}
+          <div className="flex md:hidden items-center gap-2">
+            <NotificationsDropdown />
+            <ThemeToggle />
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleViewProfile}>
+                  <Eye className="w-4 h-4 mr-2" />
+                  View Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/search")}>
+                  <SearchIcon className="w-4 h-4 mr-2" />
+                  Search
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/how-to-use")}>
+                  <HelpCircle className="w-4 h-4 mr-2" />
+                  Help & Support
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
