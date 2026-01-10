@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,22 +8,23 @@ const AuthCallback = () => {
 
     useEffect(() => {
         const handleAuthCallback = async () => {
-            const { error } = await supabase.auth.getSession();
-            if (error) {
+            try {
+                const code = new URL(window.location.href).searchParams.get("code");
+
+                if (code) {
+                    const { error } = await supabase.auth.exchangeCodeForSession(code);
+                    if (error) throw error;
+                } else {
+                    // If no code is present, check if we already have a session
+                    const { error } = await supabase.auth.getSession();
+                    if (error) throw error;
+                }
+
+                navigate("/dashboard");
+            } catch (error: any) {
                 console.error("Error exchanging code for session:", error);
                 setError(error.message);
-                // Optionally redirect to auth with error after a delay
                 setTimeout(() => navigate("/auth"), 3000);
-            } else {
-                console.log("Session established successfully");
-                // Check if it's a password recovery flow
-                const { data: { user } } = await supabase.auth.getUser();
-
-                // If we just recovered a password, we might want to go to reset password page, 
-                // but usually the link type tells us. 
-                // However, Supabase redirect handling is a bit tricky. 
-                // If the user just clicked a magic link or signup confirmation:
-                navigate("/dashboard");
             }
         };
 
