@@ -113,13 +113,13 @@ const Dashboard = () => {
       <header className="glass-card border-b sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           {/* Logo Section */}
-          <div className="flex items-center gap-2">
-            <DVCLogo className="w-8 h-8 text-primary" />
-            <h1 className="text-xl md:text-2xl font-bold text-gradient">Digital Visiting Card</h1>
+          <div className="flex items-center gap-4 flex-1 min-w-0 mr-2">
+            <DVCLogo className="w-9 h-9 text-primary shrink-0" />
+            <h1 className="text-lg md:text-2xl font-bold text-gradient truncate">Digital Visiting Card</h1>
           </div>
 
           {/* Desktop Actions */}
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2 shrink-0">
             <Button variant="ghost" size="icon" onClick={() => navigate("/search")} title="Search">
               <SearchIcon className="w-5 h-5" />
             </Button>
@@ -145,33 +145,33 @@ const Dashboard = () => {
           </div>
 
           {/* Mobile Actions */}
-          <div className="flex md:hidden items-center gap-2">
+          <div className="flex md:hidden items-center gap-2 shrink-0">
             <NotificationsDropdown />
             <ThemeToggle />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="w-5 h-5" />
+                <Button variant="ghost" size="icon" className="h-10 w-10">
+                  <Menu className="w-6 h-6" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleViewProfile}>
+                <DropdownMenuItem onClick={handleViewProfile} className="h-10 cursor-pointer">
                   <Eye className="w-4 h-4 mr-2" />
                   View Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/search")}>
+                <DropdownMenuItem onClick={() => navigate("/search")} className="h-10 cursor-pointer">
                   <SearchIcon className="w-4 h-4 mr-2" />
                   Search
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/how-to-use")}>
+                <DropdownMenuItem onClick={() => navigate("/how-to-use")} className="h-10 cursor-pointer">
                   <HelpCircle className="w-4 h-4 mr-2" />
                   Help & Support
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive h-10 cursor-pointer">
                   <LogOut className="w-4 h-4 mr-2" />
                   Logout
                 </DropdownMenuItem>

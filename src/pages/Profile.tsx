@@ -1223,7 +1223,7 @@ const Profile = () => {
         >
           <div className={`flex items-center justify-center gap-2 ${getTextColor()} opacity-50 hover:opacity-80 transition-opacity`}>
             <Zap className="w-4 h-4" />
-            <span className="text-sm font-medium">Powered by Prism Link Spot</span>
+            <span className="text-sm font-medium">Powered by Digital Visiting Card</span>
           </div>
         </motion.div>
       </div>

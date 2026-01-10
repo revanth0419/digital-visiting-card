@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
+import AuthCallback from "./pages/AuthCallback";
 
 import Profile from "./pages/Profile";
 import Search from "./pages/Search";
@@ -35,6 +36,7 @@ const AnimatedRoutes = () => {
           </motion.div>
         } />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/auth/reset-password" element={
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}

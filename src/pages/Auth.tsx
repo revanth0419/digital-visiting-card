@@ -126,7 +126,7 @@ const Auth = () => {
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "https://crystal-link.vercel.app/auth/reset-password",
+      redirectTo: "https://crystal-link.vercel.app/auth/callback",
     });
 
     if (error) {
