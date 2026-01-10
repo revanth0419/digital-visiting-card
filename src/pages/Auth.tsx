@@ -305,11 +305,15 @@ const Auth = () => {
         } else {
           setExpression("happy");
           toast({
-            title: "✅ Signup successful!",
-            description: "You can now log in with your credentials.",
+            title: "Check your email",
+            description: "Check your email to verify before login",
           });
-          // Redirect to dashboard after successful signup
-          setTimeout(() => navigate("/dashboard"), 800);
+          // Switch to login mode
+          setIsLogin(true);
+          setPassword("");
+          setConfirmPassword("");
+
+          // Do NOT navigate to dashboard
         }
       }
     } catch (error) {

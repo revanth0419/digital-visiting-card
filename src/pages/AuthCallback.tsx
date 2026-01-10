@@ -12,7 +12,7 @@ const AuthCallback = () => {
                 const code = new URL(window.location.href).searchParams.get("code");
 
                 if (code) {
-                    const { error } = await supabase.auth.exchangeCodeForSession(code);
+                    const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
                     if (error) throw error;
                 } else {
                     // If no code is present, check if we already have a session

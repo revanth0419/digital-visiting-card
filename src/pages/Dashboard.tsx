@@ -151,7 +151,7 @@ const Dashboard = () => {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-10 w-10">
+                <Button variant="ghost" size="icon" className="h-11 w-11">
                   <Menu className="w-6 h-6" />
                 </Button>
               </DropdownMenuTrigger>
