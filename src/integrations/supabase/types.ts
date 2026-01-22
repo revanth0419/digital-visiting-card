@@ -66,7 +66,7 @@ export type Database = {
           is_shopping_link: boolean
           order_index: number
           price: string | null
-          profile_id: string
+          user_id: string
           show_in_links: boolean
           title: string
           updated_at: string | null
@@ -81,7 +81,7 @@ export type Database = {
           is_shopping_link?: boolean
           order_index?: number
           price?: string | null
-          profile_id: string
+          user_id: string
           show_in_links?: boolean
           title: string
           updated_at?: string | null
@@ -96,7 +96,7 @@ export type Database = {
           is_shopping_link?: boolean
           order_index?: number
           price?: string | null
-          profile_id?: string
+          user_id?: string
           show_in_links?: boolean
           title?: string
           updated_at?: string | null
@@ -104,19 +104,12 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "links_profile_id_fkey"
-            columns: ["profile_id"]
+            foreignKeyName: "links_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "users"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "links_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
+          }
         ]
       }
       media: {
@@ -125,7 +118,7 @@ export type Database = {
           description: string | null
           id: string
           order_index: number
-          profile_id: string
+          user_id: string
           title: string
           type: string
           updated_at: string | null
@@ -136,7 +129,7 @@ export type Database = {
           description?: string | null
           id?: string
           order_index?: number
-          profile_id: string
+          user_id: string
           title: string
           type: string
           updated_at?: string | null
@@ -147,7 +140,7 @@ export type Database = {
           description?: string | null
           id?: string
           order_index?: number
-          profile_id?: string
+          user_id?: string
           title?: string
           type?: string
           updated_at?: string | null

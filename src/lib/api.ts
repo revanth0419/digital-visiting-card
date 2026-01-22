@@ -17,7 +17,7 @@ const detectBase = async (): Promise<string> => {
 
   if (envBase) {
     let trimmed = normalizeBase(envBase);
-    
+
     // If env URL uses localhost but we're accessing from a different IP, 
     // try to use the same hostname as the frontend (for network access)
     if (trimmed.includes("localhost") && typeof window !== "undefined") {
@@ -31,7 +31,7 @@ const detectBase = async (): Promise<string> => {
         }
       }
     }
-    
+
     if (trimmed.endsWith("/api")) {
       detectedBaseUrl = trimmed;
       return detectedBaseUrl;
@@ -45,7 +45,20 @@ const detectBase = async (): Promise<string> => {
     return detectedBaseUrl;
   }
 
+  // Check if we are in production. If so, do NOT fallback to localhost probing.
+  // We assume the backend is available at /api or not at all.
+  const isProd = (typeof import.meta !== "undefined" && (import.meta as any).env?.PROD);
+  if (isProd) {
+    if (!baseUrlLogShown) {
+      console.log("[api] Production mode enabled. Defaulting to /api (no localhost fallback).");
+      baseUrlLogShown = true;
+    }
+    detectedBaseUrl = "/api";
+    return detectedBaseUrl;
+  }
+
   // Fallback: probe ports 4000-4010 on localhost (backend is always on localhost)
+  // This is only for DEVELOPMENT mode.
   const proto = "http:";
   const host = "localhost";
 
@@ -105,12 +118,12 @@ export async function apiFetch<T>(
     (init.body
       ? typeof init.body === "string"
         ? (() => {
-            try {
-              return JSON.parse(init.body);
-            } catch {
-              return init.body;
-            }
-          })()
+          try {
+            return JSON.parse(init.body);
+          } catch {
+            return init.body;
+          }
+        })()
         : init.body
       : undefined);
 
@@ -127,7 +140,7 @@ export async function apiFetch<T>(
   } catch (err: any) {
     // Provide more helpful error messages
     let message = "Request failed";
-    
+
     if (err?.code === "ECONNREFUSED" || err?.message?.includes("ECONNREFUSED")) {
       message = "Cannot connect to backend server. Make sure the backend is running on port 4001.";
     } else if (err?.code === "ERR_NETWORK" || err?.message?.includes("Network Error")) {
@@ -137,7 +150,7 @@ export async function apiFetch<T>(
     } else if (err?.message) {
       message = err.message;
     }
-    
+
     console.error("[api] Request failed:", {
       url: err?.config?.url,
       baseURL: err?.config?.baseURL,
@@ -145,7 +158,7 @@ export async function apiFetch<T>(
       error: err?.message,
       code: err?.code,
     });
-    
+
     return { data: null, error: message };
   }
 }
@@ -160,4 +173,3 @@ export function buildQuery(params: Record<string, string | number | boolean | un
 }
 
 export { getApiClient };
-

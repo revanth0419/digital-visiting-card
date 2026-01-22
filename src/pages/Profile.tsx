@@ -164,7 +164,7 @@ const Profile = () => {
       const { data: linksData } = await supabase
         .from("links")
         .select("*")
-        .eq("profile_id", profileData.id)
+        .eq("user_id", ownerData.user_id)
         .eq("is_active", true)
         .order("order_index", { ascending: true });
 
@@ -175,7 +175,7 @@ const Profile = () => {
       const { data: mediaData } = await supabase
         .from("media")
         .select("*")
-        .eq("profile_id", profileData.id)
+        .eq("user_id", ownerData.user_id)
         .order("order_index", { ascending: true });
 
       if (mediaData) {

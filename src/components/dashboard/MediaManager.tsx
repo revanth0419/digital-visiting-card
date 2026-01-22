@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadRateLimiter } from "@/lib/rate-limit";
-import { apiFetch } from "@/lib/api";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,7 +33,6 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [media, setMedia] = useState<Media[]>([]);
-  const [profileId, setProfileId] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -46,7 +45,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchProfileAndMedia();
+    fetchMedia();
   }, [userId]);
 
   const getSignedUrl = async (bucket: string, path: string) => {
@@ -59,23 +58,13 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
     }
   };
 
-  const fetchProfileAndMedia = async () => {
+  const fetchMedia = async () => {
     try {
-      // Get profile ID
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", userId)
-        .single();
-
-      if (profileError) throw profileError;
-      setProfileId(profile.id);
-
-      // Get media
+      // Get media directly with userId
       const { data, error } = await supabase
         .from("media")
         .select("*")
-        .eq("profile_id", profile.id)
+        .eq("user_id", userId)
         .order("order_index", { ascending: true });
 
       if (error) throw error;
@@ -187,22 +176,17 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
 
       if (uploadError) throw uploadError;
 
-      // Add to database via API (triggers notification)
-      const { error: insertError } = await apiFetch("/media", {
-        method: "POST",
-        body: JSON.stringify({
-          type: isImage ? 'image' : 'video',
-          url: filePath,
-          title: title.trim(),
-          description: description.trim() || null,
-          order_index: media.length,
-        }),
-        headers: {
-          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-        }
+      // Add to database directly
+      const { error: insertError } = await supabase.from("media").insert({
+        user_id: userId,
+        type: isImage ? 'image' : 'video',
+        url: filePath,
+        title: title.trim(),
+        description: description.trim() || null,
+        order_index: media.length,
       });
 
-      if (insertError) throw new Error(insertError);
+      if (insertError) throw new Error(insertError.message);
 
       setUploadProgress(100);
 
@@ -221,7 +205,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
         fileInputRef.current.value = "";
       }
 
-      await fetchProfileAndMedia();
+      await fetchMedia();
     } catch (error: any) {
       toast({
         title: "Error uploading media",
@@ -260,7 +244,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
         description: "Media deleted successfully!",
       });
 
-      await fetchProfileAndMedia();
+      await fetchMedia();
     } catch (error: any) {
       toast({
         title: "Error deleting media",

@@ -12,7 +12,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { apiFetch } from "@/lib/api";
+
 
 interface Notification {
   id: string;
@@ -34,14 +34,19 @@ export const NotificationsDropdown = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const { data, error } = await apiFetch<Notification[]>("/notifications", {
-        headers: { Authorization: `Bearer ${session.access_token}` }
-      });
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
 
-      if (!error && data) {
-        setNotifications(data || []);
-        setUnreadCount(data?.filter((n: Notification) => !n.read).length || 0);
+      if (error) {
+        console.error("Failed to fetch notifications:", error);
+        return;
       }
+
+      setNotifications((data as any) || []);
+      setUnreadCount(data?.filter((n: any) => !n.read).length || 0);
     } catch (error) {
       console.error("Failed to fetch notifications", error);
     }
@@ -49,6 +54,36 @@ export const NotificationsDropdown = () => {
 
   useEffect(() => {
     fetchNotifications();
+
+    // Subscribe to realtime changes
+    const fetchSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const channel = supabase
+        .channel('schema-db-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${session.user.id}`
+          },
+          (payload) => {
+            fetchNotifications();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      }
+    };
+
+    fetchSession();
+
+    // Fallback polling
     const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -59,10 +94,13 @@ export const NotificationsDropdown = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      await apiFetch(`/notifications/${id}/read`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${session.access_token}` }
-      });
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("id", id)
+        .eq("user_id", session.user.id);
+
+      if (error) throw error;
 
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
@@ -76,10 +114,12 @@ export const NotificationsDropdown = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      await apiFetch("/notifications/read-all", {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${session.access_token}` }
-      });
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("user_id", session.user.id);
+
+      if (error) throw error;
 
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);

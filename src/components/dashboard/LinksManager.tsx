@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { apiFetch } from "@/lib/api";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,7 +97,6 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
-  const [profileId, setProfileId] = useState("");
   const [fetchingMetadata, setFetchingMetadata] = useState(false);
 
   // Form state
@@ -127,31 +126,11 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
     try {
       setLoading(true);
 
-      // Get profile
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", userId)
-        .single();
-
-      if (profileError || !profileData) {
-        console.error("Failed to fetch profile:", profileError);
-        toast({
-          title: "Error",
-          description: "Failed to load profile. Please refresh the page.",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-
-      setProfileId(profileData.id);
-
-      // Get links
+      // Get links directly using userId
       const { data, error } = await supabase
         .from("links")
         .select("*")
-        .eq("profile_id", profileData.id)
+        .eq("user_id", userId)
         .order("order_index", { ascending: true });
 
       if (error) {
@@ -279,24 +258,19 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
     setAdding(true);
 
     try {
-      const { error } = await apiFetch("/links", {
-        method: "POST",
-        body: JSON.stringify({
-          title: newTitle,
-          url: normalizedUrl,
-          icon: newIcon || null,
-          image_url: manualImageUrl || previewImage,
-          price: previewPrice,
-          order_index: links.length,
-          is_shopping_link: isShoppingLink,
-          show_in_links: showInLinks,
-        }),
-        headers: {
-          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-        }
+      const { error } = await supabase.from("links").insert({
+        user_id: userId,
+        title: newTitle,
+        url: normalizedUrl,
+        icon: newIcon || null,
+        image_url: manualImageUrl || previewImage,
+        price: previewPrice,
+        order_index: links.length,
+        is_shopping_link: isShoppingLink,
+        show_in_links: showInLinks,
       });
 
-      if (error) throw new Error(error);
+      if (error) throw error;
 
       toast({
         title: "Link added!",
@@ -326,7 +300,6 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   const handleDeleteLink = async (id: string) => {
     try {
       const { error } = await supabase.from("links").delete().eq("id", id);
-
       if (error) throw error;
 
       toast({
@@ -358,10 +331,13 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
 
     // Update order in database
     for (let i = 0; i < newLinks.length; i++) {
-      await supabase
+      // We catch error individually to not break the entire loop
+      const { error } = await supabase
         .from("links")
         .update({ order_index: i })
         .eq("id", newLinks[i].id);
+
+      if (error) console.error("Error updating order:", error);
     }
   };
 
