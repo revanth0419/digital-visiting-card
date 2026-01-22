@@ -3,8 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, UserPlus, Settings, Link2, Share2, Palette } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useAuth } from "@/components/AuthProvider";
 
 const HowToUse = () => {
+    const { session } = useAuth();
     const steps = [
         {
             icon: <UserPlus className="w-8 h-8 text-primary" />,
@@ -37,7 +39,7 @@ const HowToUse = () => {
         <div className="min-h-screen gradient-mesh p-4 md:p-8">
             <div className="max-w-4xl mx-auto">
                 <div className="mb-8 flex items-center gap-4">
-                    <Link to="/">
+                    <Link to={session ? "/dashboard" : "/"}>
                         <Button variant="ghost" size="icon">
                             <ArrowLeft className="w-6 h-6" />
                         </Button>
