@@ -499,13 +499,13 @@ const Auth = () => {
                             Forgot password?
                           </button>
                         )}
-                        {isLogin && (
+                        {!isLogin && (
                           <button
                             type="button"
                             onClick={handleResendVerification}
                             className="text-xs text-muted-foreground hover:text-primary hover:underline"
                           >
-                            Resend verification
+                            Resend verification email
                           </button>
                         )}
                       </div>
