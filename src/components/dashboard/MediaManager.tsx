@@ -182,7 +182,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       const { error: insertError } = await supabase.from("media").insert({
         user_id: userId,
         type: isImage ? 'image' : 'video',
-        url: filePath, // Using filePath as we use signed URLs or path for retrieval
+        url: publicUrl,
         title: title.trim(),
         description: description.trim() || null,
         order_index: media.length,

@@ -162,18 +162,17 @@ const Profile = () => {
       const { data: linksData } = await supabase
         .from("links")
         .select("*")
-        .eq("user_id", profileUserId)
-        .eq("is_active", true)
+        .eq("profile_id", profileUserId)
         .order("order_index", { ascending: true });
 
       if (linksData) {
-        setLinks(linksData);
+        setLinks(linksData as any);
       }
 
       const { data: mediaData } = await supabase
         .from("media")
         .select("*")
-        .eq("user_id", profileUserId)
+        .eq("profile_id", profileUserId)
         .order("order_index", { ascending: true });
 
       if (mediaData) {
