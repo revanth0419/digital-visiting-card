@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -108,6 +108,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   const [isShoppingLink, setIsShoppingLink] = useState(false);
   const [showInLinks, setShowInLinks] = useState(true);
   const [manualImageUrl, setManualImageUrl] = useState("");
+  const debounceTimer = useRef<NodeJS.Timeout>();
 
   const { toast } = useToast();
 
@@ -211,17 +212,24 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
     setPreviewPrice(null);
 
     const normalizedUrl = normalizeUrl(url);
+
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
     if (validateUrl(normalizedUrl)) {
-      const metadata = await fetchLinkMetadata(normalizedUrl);
-      if (metadata.imageUrl) {
-        setPreviewImage(metadata.imageUrl);
-      }
-      if (metadata.title && !newTitle) {
-        setNewTitle(metadata.title);
-      }
-      if (metadata.price) {
-        setPreviewPrice(metadata.price);
-      }
+      debounceTimer.current = setTimeout(async () => {
+        const metadata = await fetchLinkMetadata(normalizedUrl);
+        if (metadata.imageUrl) {
+          setPreviewImage(metadata.imageUrl);
+        }
+        if (metadata.title && !newTitle) {
+          setNewTitle(metadata.title);
+        }
+        if (metadata.price) {
+          setPreviewPrice(metadata.price);
+        }
+      }, 500);
     }
   };
 

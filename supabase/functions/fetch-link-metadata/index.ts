@@ -1,34 +1,39 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const allowedOrigins = [
+  'https://crystal-link.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000' // Optional backup
+];
+
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Credentials': 'true',
 };
 
-type RateLimitRecord = { count: number; resetAt: number };
-const rateBuckets = new Map<string, RateLimitRecord>();
-
-function checkRateLimit(key: string, max: number, windowMs: number): { allowed: boolean; retryAfterSeconds?: number } {
-  const now = Date.now();
-  const existing = rateBuckets.get(key);
-  const record: RateLimitRecord = existing && now < existing.resetAt
-    ? existing
-    : { count: 0, resetAt: now + windowMs };
-
-  if (record.count >= max) {
-    const retryAfterSeconds = Math.max(1, Math.ceil((record.resetAt - now) / 1000));
-    return { allowed: false, retryAfterSeconds };
-  }
-
-  record.count += 1;
-  rateBuckets.set(key, record);
-  return { allowed: true };
-}
-
 serve(async (req) => {
+  const origin = req.headers.get('Origin');
+  const isAllowed = origin && allowedOrigins.includes(origin);
+  const headers = {
+    ...corsHeaders,
+    'Access-Control-Allow-Origin': isAllowed ? origin : '*', // Fallback to * if not matching specific but maybe user wants standard behavior
+  };
+
+  // Safe Access-Control-Allow-Origin strategy:
+  // If we really need credentials, we must return the specific origin.
+  // If origin is not in list, and we use *, credentials won't work. 
+  // Let's stick to returning the origin if allowed, otherwise maybe just '*' (but credentials fail).
+  // Request said: "Allow origin: https://crystal-link.vercel.app...". 
+
+  const responseHeaders = {
+    ...corsHeaders,
+    'Access-Control-Allow-Origin': isAllowed ? origin : 'https://crystal-link.vercel.app',
+  };
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: responseHeaders });
   }
 
   try {
@@ -37,7 +42,7 @@ serve(async (req) => {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return new Response(
         JSON.stringify({ error: 'Authorization required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...responseHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -45,9 +50,9 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-    
+
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-    
+
     if (authError || !user) {
       console.log('Authentication failed:', authError?.message || 'No user found');
       return new Response(
@@ -95,7 +100,7 @@ serve(async (req) => {
     try {
       const urlObj = new URL(url);
       const hostname = urlObj.hostname;
-      
+
       // Block localhost and private IPs to prevent SSRF attacks
       const blockedPatterns = [
         /^localhost$/i,
@@ -108,7 +113,7 @@ serve(async (req) => {
         /^\[?fe80:/i, // IPv6 link-local
         /^\[?fc00:/i, // IPv6 private
       ];
-      
+
       if (blockedPatterns.some(pattern => pattern.test(hostname))) {
         return new Response(
           JSON.stringify({ error: 'URL not allowed' }),
@@ -127,7 +132,7 @@ serve(async (req) => {
     // Fetch the HTML content with more realistic headers and timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -141,7 +146,7 @@ serve(async (req) => {
       redirect: 'follow',
       signal: controller.signal,
     });
-    
+
     clearTimeout(timeoutId);
 
     if (!response.ok) {
@@ -159,9 +164,9 @@ serve(async (req) => {
           title: null,
           price: null,
         }),
-        { 
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
@@ -172,11 +177,11 @@ serve(async (req) => {
     const ogImageMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
     const ogTitleMatch = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i);
     const ogPriceMatch = html.match(/<meta[^>]*property=["']og:price:amount["'][^>]*content=["']([^"']+)["']/i);
-    
+
     // Fallback to regular meta tags
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
     const imageMatch = html.match(/<meta[^>]*name=["']image["'][^>]*content=["']([^"']+)["']/i);
-    
+
     // Try to extract price from various common patterns
     const pricePatterns = [
       /["']price["'][^>]*content=["']([^"']+)["']/i,
@@ -184,7 +189,7 @@ serve(async (req) => {
       /\$\s*([0-9,]+(?:\.[0-9]{2})?)/,
       /price["\s:]+([0-9,]+(?:\.[0-9]{2})?)/i,
     ];
-    
+
     let priceMatch = ogPriceMatch?.[1];
     if (!priceMatch) {
       for (const pattern of pricePatterns) {
@@ -208,9 +213,9 @@ serve(async (req) => {
         title,
         price,
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   } catch (error) {
@@ -222,15 +227,15 @@ serve(async (req) => {
     }));
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: errorMessage,
         imageUrl: null,
         title: null,
         price: null,
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }

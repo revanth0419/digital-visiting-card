@@ -111,6 +111,40 @@ const Auth = () => {
     return username.length >= 3 && username.length <= 30 && /^[a-zA-Z0-9_-]+$/.test(username);
   };
 
+  const handleResendVerification = async () => {
+    if (!email) {
+      toast({
+        title: "Email required",
+        description: "Please enter your email address to resend the verification link.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: {
+        emailRedirectTo: "https://crystal-link.vercel.app/auth/callback",
+      },
+    });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Email sent",
+        description: "Check your inbox (and spam) for the verification link. It may take 1-2 minutes.",
+      });
+    }
+    setLoading(false);
+  };
+
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -306,7 +340,8 @@ const Auth = () => {
           setExpression("happy");
           toast({
             title: "Check your email",
-            description: "Check your email to verify before login",
+            description: "Please check your email (and spam folder) to verify your account. It may take 1-2 minutes to arrive.",
+            duration: 6000,
           });
           // Switch to login mode
           setIsLogin(true);
@@ -454,13 +489,21 @@ const Auth = () => {
                           )}
                         </button>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsForgotPassword(true)}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Forgot password?
+                      </button>
+                      )}
                       {isLogin && (
                         <button
                           type="button"
-                          onClick={() => setIsForgotPassword(true)}
-                          className="text-xs text-primary hover:underline"
+                          onClick={handleResendVerification}
+                          className="text-xs text-muted-foreground hover:text-primary hover:underline ml-auto"
                         >
-                          Forgot password?
+                          Resend verification
                         </button>
                       )}
                     </div>
