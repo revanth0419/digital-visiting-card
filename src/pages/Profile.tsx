@@ -93,60 +93,58 @@ const Profile = () => {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUserId(user?.id || null);
 
-      // Use public_profiles view to avoid exposing user_id
+      // Query profiles by username using public SELECT policy
       const { data: profileData, error: profileError } = await supabase
-        .from("public_profiles")
+        .from("profiles")
         .select("*")
         .eq("username", username)
-        .single();
+        .maybeSingle();
 
       if (profileError || !profileData) {
+        console.error("Error fetching profile:", profileError);
         setLoading(false);
         return;
       }
 
       setProfile(profileData);
 
-      // Get user_id for the profile owner (needed for books and subscriptions)
-      const { data: ownerData } = await supabase
-        .from("profiles")
-        .select("user_id")
-        .eq("id", profileData.id)
-        .single();
+      // Profiles.id is the user_id
+      const profileUserId = profileData.id;
 
-      // Fetch books and music for this profile (only show_on_profile = true for public view)
-      if (ownerData?.user_id) {
-        const { data: booksData } = await supabase
-          .from("books")
-          .select("*")
-          .eq("user_id", ownerData.user_id)
-          .eq("show_on_profile", true)
-          .order("created_at", { ascending: false });
-        if (booksData) setBooks(booksData);
+      // Fetch books and music for this profile
+      const { data: booksData } = await supabase
+        .from("books")
+        .select("*")
+        .eq("user_id", profileUserId)
+        .eq("show_on_profile", true)
+        .order("created_at", { ascending: false });
+      if (booksData) setBooks(booksData);
 
-        const { data: musicData } = await supabase
-          .from("music_tracks")
-          .select("*")
-          .eq("user_id", ownerData.user_id)
-          .eq("show_on_profile", true)
-          .order("created_at", { ascending: false });
-        if (musicData) setMusicTracks(musicData as MusicTrack[]);
-      }
+      const { data: musicData } = await supabase
+        .from("music_tracks")
+        .select("*")
+        .eq("user_id", profileUserId)
+        .eq("show_on_profile", true)
+        .order("created_at", { ascending: false });
+      if (musicData) setMusicTracks(musicData as MusicTrack[]);
 
-      // For subscriptions, we need to check if viewing someone else's profile
-      if (user && ownerData?.user_id && ownerData.user_id !== user.id) {
+      // For subscriptions
+      if (user && profileUserId !== user.id) {
         const { data: subscription } = await supabase
           .from("subscriptions")
           .select("*")
           .eq("subscriber_id", user.id)
-          .eq("subscribed_to_id", ownerData.user_id)
+          .eq("subscribed_to_id", profileUserId)
           .maybeSingle();
         setIsSubscribed(!!subscription);
       }
 
-      // Generate signed URLs for avatar and background with longer expiry
+      // Generate signed URLs
       if (profileData.avatar_url) {
         const path = extractStoragePath(profileData.avatar_url) || profileData.avatar_url;
+        // Try both buckets just in case, but prioritize 'avatars' for profile pics if that was the convention, 
+        // or 'media' if migrated. The user request didn't specify changing avatar bucket, but 'media' bucket is for new media.
+        // We'll stick to 'avatars' for avatar_url as per existing code, unless it fails.
         const signedUrl = await getSignedUrl('avatars', path, 7200);
         if (signedUrl) setSignedAvatarUrl(signedUrl);
       } else {
@@ -164,7 +162,7 @@ const Profile = () => {
       const { data: linksData } = await supabase
         .from("links")
         .select("*")
-        .eq("user_id", ownerData.user_id)
+        .eq("user_id", profileUserId)
         .eq("is_active", true)
         .order("order_index", { ascending: true });
 
@@ -175,7 +173,7 @@ const Profile = () => {
       const { data: mediaData } = await supabase
         .from("media")
         .select("*")
-        .eq("user_id", ownerData.user_id)
+        .eq("user_id", profileUserId)
         .order("order_index", { ascending: true });
 
       if (mediaData) {

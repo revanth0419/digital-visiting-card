@@ -168,7 +168,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       }, 200);
 
       const { error: uploadError } = await supabase.storage
-        .from('media')
+        .from('media') // Ensure bucket is 'media'
         .upload(filePath, selectedFile);
 
       clearInterval(progressInterval);
@@ -177,10 +177,12 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       if (uploadError) throw uploadError;
 
       // Add to database directly
+      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(filePath);
+
       const { error: insertError } = await supabase.from("media").insert({
         user_id: userId,
         type: isImage ? 'image' : 'video',
-        url: filePath,
+        url: filePath, // Using filePath as we use signed URLs or path for retrieval
         title: title.trim(),
         description: description.trim() || null,
         order_index: media.length,
