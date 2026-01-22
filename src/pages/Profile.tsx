@@ -95,7 +95,7 @@ const Profile = () => {
 
       // Query profiles by username using public SELECT policy
       const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
+        .from("profiles" as any)
         .select("*")
         .eq("username", username)
         .maybeSingle();
@@ -113,7 +113,7 @@ const Profile = () => {
 
       // Fetch books and music for this profile
       const { data: booksData } = await supabase
-        .from("books")
+        .from("books" as any)
         .select("*")
         .eq("user_id", profileUserId)
         .eq("show_on_profile", true)
@@ -121,7 +121,7 @@ const Profile = () => {
       if (booksData) setBooks(booksData);
 
       const { data: musicData } = await supabase
-        .from("music_tracks")
+        .from("music_tracks" as any)
         .select("*")
         .eq("user_id", profileUserId)
         .eq("show_on_profile", true)
@@ -131,7 +131,7 @@ const Profile = () => {
       // For subscriptions
       if (user && profileUserId !== user.id) {
         const { data: subscription } = await supabase
-          .from("subscriptions")
+          .from("subscriptions" as any)
           .select("*")
           .eq("subscriber_id", user.id)
           .eq("subscribed_to_id", profileUserId)
@@ -160,7 +160,7 @@ const Profile = () => {
       }
 
       const { data: linksData } = await supabase
-        .from("links")
+        .from("links" as any)
         .select("*")
         .eq("profile_id", profileUserId)
         .order("order_index", { ascending: true });
@@ -170,7 +170,7 @@ const Profile = () => {
       }
 
       const { data: mediaData } = await supabase
-        .from("media")
+        .from("media" as any)
         .select("*")
         .eq("profile_id", profileUserId)
         .order("order_index", { ascending: true });
@@ -933,13 +933,13 @@ const Profile = () => {
             >
               {linksTabItems.length > 0 ? (
                 <div className="space-y-8">
-                  {linksTabItems.filter(link => !link.is_shopping_link).length > 0 && (
-                    renderLinkSection(linksTabItems.filter(link => !link.is_shopping_link), "Links")
+                  {linksTabItems.filter(link => !link.show_in_shop).length > 0 && (
+                    renderLinkSection(linksTabItems.filter(link => !link.show_in_shop), "Links")
                   )}
-                  {linksTabItems.filter(link => link.is_shopping_link).length > 0 && (
+                  {linksTabItems.filter(link => link.show_in_shop).length > 0 && (
                     <div>
                       <h3 className={`text-2xl font-bold mb-6 ${getTextColor()}`}>Featured Products</h3>
-                      {renderLinkSection(linksTabItems.filter(link => link.is_shopping_link), "Shop")}
+                      {renderLinkSection(linksTabItems.filter(link => link.show_in_shop), "Shop")}
                     </div>
                   )}
                 </div>

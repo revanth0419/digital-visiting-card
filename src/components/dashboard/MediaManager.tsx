@@ -62,7 +62,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
     try {
       // Get media directly with userId
       const { data, error } = await supabase
-        .from("media")
+        .from("media" as any)
         .select("*")
         .eq("user_id", userId)
         .order("order_index", { ascending: true });
@@ -179,7 +179,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       // Add to database directly
       const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(filePath);
 
-      const { error: insertError } = await supabase.from("media").insert({
+      const { error: insertError } = await supabase.from("media" as any).insert({
         user_id: userId,
         type: isImage ? 'image' : 'video',
         url: publicUrl,
@@ -237,7 +237,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       await supabase.storage.from('media').remove([mediaItem.url]);
 
       // Delete from database
-      const { error } = await supabase.from("media").delete().eq("id", mediaItem.id);
+      const { error } = await supabase.from("media" as any).delete().eq("id", mediaItem.id);
 
       if (error) throw error;
 
