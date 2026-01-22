@@ -39,8 +39,8 @@ type Link = {
   url: string;
   icon: string | null;
   order_index: number;
-  image_url: string | null;
-  is_shopping_link: boolean;
+  product_image_url: string | null;
+  show_in_shop: boolean;
   price: string | null;
 };
 
@@ -273,9 +273,9 @@ const Profile = () => {
     return "glass-card border-2";
   };
 
-  // Filter links based on both show_in_links and is_shopping_link
+  // Filter links based on both show_in_links and show_in_shop
   const linksTabItems = links.filter(link => (link as any).show_in_links);
-  const shopTabItems = links.filter(link => link.is_shopping_link);
+  const shopTabItems = links.filter(link => link.show_in_shop);
 
   // Render empty state for shop section
   const renderShopEmptyState = () => (
@@ -351,10 +351,10 @@ const Profile = () => {
                     />
 
                     <CardContent className="p-0">
-                      {link.image_url ? (
+                      {link.product_image_url ? (
                         <div className="relative overflow-hidden aspect-video">
                           <img
-                            src={link.image_url}
+                            src={link.product_image_url}
                             alt={link.title}
                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                             loading="lazy"
@@ -375,7 +375,7 @@ const Profile = () => {
                       <div className="p-6">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            {link.icon && !link.image_url && (
+                            {link.icon && !link.product_image_url && (
                               <span className="text-3xl mb-3 block">{link.icon}</span>
                             )}
                             <h4 className={`font-bold text-lg ${getTextColor()} mb-2 line-clamp-2`}>
@@ -390,7 +390,7 @@ const Profile = () => {
                               </p>
                             )}
                           </div>
-                          {!link.image_url && (
+                          {!link.product_image_url && (
                             <div
                               className="w-10 h-10 rounded-xl flex items-center justify-center opacity-60 group-hover:opacity-100 transition-all duration-300"
                               style={{ backgroundColor: `${themeColor}20` }}
@@ -459,10 +459,10 @@ const Profile = () => {
 
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
-                        {link.image_url ? (
+                        {link.product_image_url ? (
                           <div className="relative overflow-hidden rounded-xl flex-shrink-0 h-14 w-14">
                             <img
-                              src={link.image_url}
+                              src={link.product_image_url}
                               alt={link.title}
                               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                               loading="lazy"
@@ -553,10 +553,10 @@ const Profile = () => {
 
                   <CardContent className="p-5">
                     <div className="flex items-center gap-5">
-                      {link.image_url && (
+                      {link.product_image_url && (
                         <div className="relative overflow-hidden rounded-2xl flex-shrink-0 h-24 w-24">
                           <img
-                            src={link.image_url}
+                            src={link.product_image_url}
                             alt={link.title}
                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                             loading="lazy"
@@ -572,7 +572,7 @@ const Profile = () => {
                       <div className="flex items-center justify-between flex-1 min-w-0">
                         <div className="flex flex-col gap-2 flex-1 min-w-0">
                           <div className="flex items-center gap-4">
-                            {link.icon && !link.image_url && (
+                            {link.icon && !link.product_image_url && (
                               <span className="text-3xl flex-shrink-0">{link.icon}</span>
                             )}
                             <span className={`font-bold text-lg ${getTextColor()} line-clamp-2`}>
@@ -588,7 +588,7 @@ const Profile = () => {
                             </span>
                           )}
                         </div>
-                        {!link.image_url && (
+                        {!link.product_image_url && (
                           <div
                             className="w-12 h-12 rounded-2xl flex items-center justify-center ml-4 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-all duration-300"
                             style={{ backgroundColor: `${themeColor}20` }}

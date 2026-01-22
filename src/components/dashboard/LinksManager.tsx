@@ -32,8 +32,8 @@ type Link = {
   url: string;
   icon: string | null;
   order_index: number;
-  image_url: string | null;
-  is_shopping_link: boolean;
+  product_image_url: string | null;
+  show_in_shop: boolean;
   show_in_links: boolean;
   price: string | null;
 };
@@ -65,9 +65,9 @@ const SortableLink = ({
       <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
         <GripVertical className="w-5 h-5 text-muted-foreground" />
       </div>
-      {link.image_url && (
+      {link.product_image_url && (
         <img
-          src={link.image_url}
+          src={link.product_image_url}
           alt={link.title}
           className="w-12 h-12 object-cover rounded"
         />
@@ -263,11 +263,9 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
         title: newTitle,
         url: normalizedUrl,
         icon: newIcon || null,
-        image_url: manualImageUrl || previewImage,
-        price: previewPrice,
-        order_index: links.length,
-        is_shopping_link: isShoppingLink,
+        show_in_shop: isShoppingLink,
         show_in_links: showInLinks,
+        product_image_url: manualImageUrl || previewImage,
       });
 
       if (error) throw error;
