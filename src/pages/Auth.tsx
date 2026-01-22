@@ -489,23 +489,26 @@ const Auth = () => {
                           )}
                         </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setIsForgotPassword(true)}
-                        className="text-xs text-primary hover:underline"
-                      >
-                        Forgot password?
-                      </button>
-                      )}
-                      {isLogin && (
-                        <button
-                          type="button"
-                          onClick={handleResendVerification}
-                          className="text-xs text-muted-foreground hover:text-primary hover:underline ml-auto"
-                        >
-                          Resend verification
-                        </button>
-                      )}
+                      <div className="flex items-center justify-between mt-2">
+                        {isLogin && (
+                          <button
+                            type="button"
+                            onClick={() => setIsForgotPassword(true)}
+                            className="text-xs text-primary hover:underline"
+                          >
+                            Forgot password?
+                          </button>
+                        )}
+                        {isLogin && (
+                          <button
+                            type="button"
+                            onClick={handleResendVerification}
+                            className="text-xs text-muted-foreground hover:text-primary hover:underline"
+                          >
+                            Resend verification
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Password Requirements Checklist for Signup */}
