@@ -98,7 +98,7 @@ const Profile = () => {
         .from("profiles" as any)
         .select("*")
         .eq("username", username)
-        .maybeSingle();
+        .maybeSingle() as any;
 
       if (profileError || !profileData) {
         console.error("Error fetching profile:", profileError);
@@ -117,7 +117,7 @@ const Profile = () => {
         .select("*")
         .eq("user_id", profileUserId)
         .eq("show_on_profile", true)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false }) as any;
       if (booksData) setBooks(booksData);
 
       const { data: musicData } = await supabase
@@ -125,7 +125,7 @@ const Profile = () => {
         .select("*")
         .eq("user_id", profileUserId)
         .eq("show_on_profile", true)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false }) as any;
       if (musicData) setMusicTracks(musicData as MusicTrack[]);
 
       // For subscriptions
@@ -135,7 +135,7 @@ const Profile = () => {
           .select("*")
           .eq("subscriber_id", user.id)
           .eq("subscribed_to_id", profileUserId)
-          .maybeSingle();
+          .maybeSingle() as any;
         setIsSubscribed(!!subscription);
       }
 
@@ -163,7 +163,7 @@ const Profile = () => {
         .from("links" as any)
         .select("*")
         .eq("profile_id", profileUserId)
-        .order("order_index", { ascending: true });
+        .order("order_index", { ascending: true }) as any;
 
       if (linksData) {
         setLinks(linksData as any);
@@ -173,7 +173,7 @@ const Profile = () => {
         .from("media" as any)
         .select("*")
         .eq("profile_id", profileUserId)
-        .order("order_index", { ascending: true });
+        .order("order_index", { ascending: true }) as any;
 
       if (mediaData) {
         setMedia(mediaData as Media[]);
