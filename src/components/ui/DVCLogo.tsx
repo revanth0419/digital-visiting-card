@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/branding/dvc-logo-circle.png";
 
 interface DVCLogoProps extends React.ImgHTMLAttributes<HTMLImageElement> {
     className?: string;
@@ -9,7 +10,7 @@ interface DVCLogoProps extends React.ImgHTMLAttributes<HTMLImageElement> {
 export const DVCLogo = ({ className, variant = "premium", ...props }: DVCLogoProps) => {
     return (
         <img
-            src="/src/assets/branding/dvc-logo-circle.png"
+            src={logo}
             alt="Digital Visiting Card Logo"
             className={cn(
                 "object-contain",
