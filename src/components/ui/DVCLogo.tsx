@@ -14,8 +14,14 @@ export const DVCLogo = ({ className, variant = "premium", ...props }: DVCLogoPro
             alt="Digital Visiting Card Logo"
             className={cn(
                 "object-contain",
+                // Premium variant (default)
                 variant === "premium" && "bg-black rounded-full border border-white/10 shadow-[0_0_20px_rgba(168,85,247,0.35)]",
+
+                // Navbar variant (formerly premium-green)
                 variant === "premium-green" && "bg-black rounded-full ring-1 ring-white/15 shadow-lg shadow-purple-500/20 hover:scale-105 transition-transform duration-300",
+
+                // Hero variant (center page) - Adding black bg
+                variant === "hero" && "bg-black rounded-full border-2 border-white/10 shadow-2xl shadow-purple-500/30",
                 className
             )}
             {...props}
