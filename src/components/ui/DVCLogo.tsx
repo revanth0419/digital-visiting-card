@@ -15,7 +15,7 @@ export const DVCLogo = ({ className, variant = "premium", ...props }: DVCLogoPro
             className={cn(
                 "object-contain",
                 variant === "premium" && "bg-black rounded-full border border-white/10 shadow-[0_0_20px_rgba(168,85,247,0.35)]",
-                variant === "premium-green" && "bg-green-600 rounded-full border border-white/10 shadow-lg shadow-green-500/30",
+                variant === "premium-green" && "bg-black rounded-full ring-1 ring-white/15 shadow-lg shadow-purple-500/20 hover:scale-105 transition-transform duration-300",
                 className
             )}
             {...props}

@@ -115,7 +115,7 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           {/* Logo Section */}
           <div className="flex items-center gap-4 flex-1 min-w-0 mr-2">
-            <DVCLogo variant="premium-green" className="w-8 h-8 md:w-10 md:h-10 transition-all duration-200 ease-out hover:scale-105 shrink-0" />
+            <DVCLogo variant="premium-green" className="w-8 h-8 md:w-9 md:h-9 shrink-0" />
             <h1 className="text-lg md:text-2xl font-bold text-gradient truncate">Digital Visiting Card</h1>
           </div>
 
