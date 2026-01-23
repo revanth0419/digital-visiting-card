@@ -11,7 +11,7 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
-  }
+  },
   public: {
     Tables: {
       books: {
@@ -57,313 +57,317 @@ export type Database = {
         Relationships: []
       }
       links: {
-        show_in_shop: boolean | null
-        product_image_url: string | null
-        created_at: string | null
-        icon: string | null
-        id: string
-        image_url: string | null
-        is_active: boolean | null
-        is_shopping_link: boolean
-        order_index: number
-        price: string | null
-        user_id: string
-        show_in_links: boolean
-        title: string
-        updated_at: string | null
-        url: string
-      }
-      Insert: {
-        show_in_shop?: boolean | null
-        product_image_url?: string | null
-        created_at?: string | null
-        icon?: string | null
-        id?: string
-        image_url?: string | null
-        is_active?: boolean | null
-        is_shopping_link?: boolean
-        order_index?: number
-        price?: string | null
-        user_id: string
-        show_in_links?: boolean
-        title: string
-        updated_at?: string | null
-        url: string
-      }
-      Update: {
-        show_in_shop?: boolean | null
-        product_image_url?: string | null
-        created_at?: string | null
-        icon?: string | null
-        id?: string
-        image_url?: string | null
-        is_active?: boolean | null
-        is_shopping_link?: boolean
-        order_index?: number
-        price?: string | null
-        user_id?: string
-        show_in_links?: boolean
-        title?: string
-        updated_at?: string | null
-        url?: string
-      }
-      Relationships: [
-        {
-          foreignKeyName: "links_user_id_fkey"
-          columns: ["user_id"]
-          isOneToOne: false
-          referencedRelation: "users"
-          referencedColumns: ["id"]
+        Row: {
+          show_in_shop: boolean | null
+          product_image_url: string | null
+          created_at: string | null
+          icon: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          is_shopping_link: boolean
+          order_index: number
+          price: string | null
+          user_id: string
+          show_in_links: boolean
+          title: string
+          updated_at: string | null
+          url: string
         }
-      ]
-    }
-    media: {
-      Row: {
-        created_at: string | null
-        description: string | null
-        id: string
-        order_index: number
-        user_id: string
-        title: string
-        type: string
-        updated_at: string | null
-        url: string
+        Insert: {
+          show_in_shop?: boolean | null
+          product_image_url?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_shopping_link?: boolean
+          order_index?: number
+          price?: string | null
+          user_id: string
+          show_in_links?: boolean
+          title: string
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          show_in_shop?: boolean | null
+          product_image_url?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_shopping_link?: boolean
+          order_index?: number
+          price?: string | null
+          user_id?: string
+          show_in_links?: boolean
+          title?: string
+          updated_at?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "links_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      },
+      media: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          order_index: number
+          user_id: string
+          title: string
+          type: string
+          updated_at: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          order_index?: number
+          user_id: string
+          title: string
+          type: string
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          order_index?: number
+          user_id?: string
+          title?: string
+          type?: string
+          updated_at?: string | null
+          url?: string
+        }
+        Relationships: []
       }
-      Insert: {
-        created_at?: string | null
-        description?: string | null
-        id?: string
-        order_index?: number
-        user_id: string
-        title: string
-        type: string
-        updated_at?: string | null
-        url: string
+      music_tracks: {
+        Row: {
+          audio_url: string | null
+          cover_image_url: string | null
+          created_at: string
+          genre: string | null
+          has_vocals: boolean | null
+          id: string
+          language: string | null
+          lyrics: string | null
+          mood: string | null
+          prompt: string | null
+          show_on_profile: boolean | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          audio_url?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          genre?: string | null
+          has_vocals?: boolean | null
+          id?: string
+          language?: string | null
+          lyrics?: string | null
+          mood?: string | null
+          prompt?: string | null
+          show_on_profile?: boolean | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          audio_url?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          genre?: string | null
+          has_vocals?: boolean | null
+          id?: string
+          language?: string | null
+          lyrics?: string | null
+          mood?: string | null
+          prompt?: string | null
+          show_on_profile?: boolean | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
-      Update: {
-        created_at?: string | null
-        description?: string | null
-        id?: string
-        order_index?: number
-        user_id?: string
-        title?: string
-        type?: string
-        updated_at?: string | null
-        url?: string
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          link: string | null
+          message: string
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          link?: string | null
+          message: string
+          read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          link?: string | null
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
-      Relationships: []
-    }
-    music_tracks: {
-      Row: {
-        audio_url: string | null
-        cover_image_url: string | null
-        created_at: string
-        genre: string | null
-        has_vocals: boolean | null
-        id: string
-        language: string | null
-        lyrics: string | null
-        mood: string | null
-        prompt: string | null
-        show_on_profile: boolean | null
-        title: string
-        updated_at: string
-        user_id: string
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          background_type: string | null
+          background_url: string | null
+          bio: string | null
+          created_at: string | null
+          display_name: string | null
+          id: string
+          layout_style: string | null
+          profile_theme: string | null
+          theme_color: string | null
+          updated_at: string | null
+          user_id: string
+          username: string
+          is_active: boolean | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          background_type?: string | null
+          background_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string
+          layout_style?: string | null
+          profile_theme?: string | null
+          theme_color?: string | null
+          updated_at?: string | null
+          user_id: string
+          username: string
+        }
+        Update: {
+          avatar_url?: string | null
+          background_type?: string | null
+          background_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string
+          layout_style?: string | null
+          profile_theme?: string | null
+          theme_color?: string | null
+          updated_at?: string | null
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
       }
-      Insert: {
-        audio_url?: string | null
-        cover_image_url?: string | null
-        created_at?: string
-        genre?: string | null
-        has_vocals?: boolean | null
-        id?: string
-        language?: string | null
-        lyrics?: string | null
-        mood?: string | null
-        prompt?: string | null
-        show_on_profile?: boolean | null
-        title: string
-        updated_at?: string
-        user_id: string
+      subscriptions: {
+        Row: {
+          created_at: string | null
+          id: string
+          subscribed_to_id: string
+          subscriber_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          subscribed_to_id: string
+          subscriber_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          subscribed_to_id?: string
+          subscriber_id?: string
+        }
+        Relationships: []
       }
-      Update: {
-        audio_url?: string | null
-        cover_image_url?: string | null
-        created_at?: string
-        genre?: string | null
-        has_vocals?: boolean | null
-        id?: string
-        language?: string | null
-        lyrics?: string | null
-        mood?: string | null
-        prompt?: string | null
-        show_on_profile?: boolean | null
-        title?: string
-        updated_at?: string
-        user_id?: string
+    },
+    Views: {
+      public_profiles: {
+        Row: {
+          avatar_url: string | null
+          background_type: string | null
+          background_url: string | null
+          bio: string | null
+          created_at: string | null
+          display_name: string | null
+          id: string | null
+          layout_style: string | null
+          profile_theme: string | null
+          theme_color: string | null
+          updated_at: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          background_type?: string | null
+          background_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string | null
+          layout_style?: string | null
+          profile_theme?: string | null
+          theme_color?: string | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          background_type?: string | null
+          background_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string | null
+          layout_style?: string | null
+          profile_theme?: string | null
+          theme_color?: string | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Relationships: []
       }
-      Relationships: []
-    }
-    notifications: {
-      Row: {
-        created_at: string | null
-        id: string
-        link: string | null
-        message: string
-        read: boolean | null
-        title: string
-        type: string
-        user_id: string
-      }
-      Insert: {
-        created_at?: string | null
-        id?: string
-        link?: string | null
-        message: string
-        read?: boolean | null
-        title: string
-        type: string
-        user_id: string
-      }
-      Update: {
-        created_at?: string | null
-        id?: string
-        link?: string | null
-        message?: string
-        read?: boolean | null
-        title?: string
-        type?: string
-        user_id?: string
-      }
-      Relationships: []
-    }
-    profiles: {
-      Row: {
-        avatar_url: string | null
-        background_type: string | null
-        background_url: string | null
-        bio: string | null
-        created_at: string | null
-        display_name: string | null
-        id: string
-        layout_style: string | null
-        profile_theme: string | null
-        theme_color: string | null
-        updated_at: string | null
-        user_id: string
-        username: string
-      }
-      Insert: {
-        avatar_url?: string | null
-        background_type?: string | null
-        background_url?: string | null
-        bio?: string | null
-        created_at?: string | null
-        display_name?: string | null
-        id?: string
-        layout_style?: string | null
-        profile_theme?: string | null
-        theme_color?: string | null
-        updated_at?: string | null
-        user_id: string
-        username: string
-      }
-      Update: {
-        avatar_url?: string | null
-        background_type?: string | null
-        background_url?: string | null
-        bio?: string | null
-        created_at?: string | null
-        display_name?: string | null
-        id?: string
-        layout_style?: string | null
-        profile_theme?: string | null
-        theme_color?: string | null
-        updated_at?: string | null
-        user_id?: string
-        username?: string
-      }
-      Relationships: []
-    }
-    subscriptions: {
-      Row: {
-        created_at: string | null
-        id: string
-        subscribed_to_id: string
-        subscriber_id: string
-      }
-      Insert: {
-        created_at?: string | null
-        id?: string
-        subscribed_to_id: string
-        subscriber_id: string
-      }
-      Update: {
-        created_at?: string | null
-        id?: string
-        subscribed_to_id?: string
-        subscriber_id?: string
-      }
-      Relationships: []
+    },
+    Functions: {
+      [_ in never]: never
+    },
+    Enums: {
+      [_ in never]: never
+    },
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
-  Views: {
-    public_profiles: {
-      Row: {
-        avatar_url: string | null
-        background_type: string | null
-        background_url: string | null
-        bio: string | null
-        created_at: string | null
-        display_name: string | null
-        id: string | null
-        layout_style: string | null
-        profile_theme: string | null
-        theme_color: string | null
-        updated_at: string | null
-        username: string | null
-      }
-      Insert: {
-        avatar_url?: string | null
-        background_type?: string | null
-        background_url?: string | null
-        bio?: string | null
-        created_at?: string | null
-        display_name?: string | null
-        id?: string | null
-        layout_style?: string | null
-        profile_theme?: string | null
-        theme_color?: string | null
-        updated_at?: string | null
-        username?: string | null
-      }
-      Update: {
-        avatar_url?: string | null
-        background_type?: string | null
-        background_url?: string | null
-        bio?: string | null
-        created_at?: string | null
-        display_name?: string | null
-        id?: string | null
-        layout_style?: string | null
-        profile_theme?: string | null
-        theme_color?: string | null
-        updated_at?: string | null
-        username?: string | null
-      }
-      Relationships: []
-    }
-  }
-  Functions: {
-    [_ in never]: never
-  }
-  Enums: {
-    [_ in never]: never
-  }
-  CompositeTypes: {
-    [_ in never]: never
-  }
-}
+
+
 }
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">

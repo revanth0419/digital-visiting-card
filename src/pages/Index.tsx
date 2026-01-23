@@ -10,6 +10,7 @@ const Index = () => {
   return (
     <div className="min-h-screen gradient-mesh">
       {/* Header with Theme Toggle */}
+      {/* Header with Theme Toggle */}
       <div className="container mx-auto px-4 pt-4 flex justify-end">
         <ThemeToggle />
       </div>
@@ -19,7 +20,7 @@ const Index = () => {
         <div className="max-w-4xl mx-auto animate-fade-in">
           <div className="flex items-center justify-center gap-3 mb-2 mt-12 animate-bounce-in">
             <div className="p-0">
-              <DVCLogo className="w-24 h-24 md:w-32 md:h-32 drop-shadow-xl" />
+              <DVCLogo variant="hero" className="w-20 h-20 md:w-28 md:h-28" />
             </div>
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 text-gradient animate-slide-up pb-4 leading-tight">
@@ -115,7 +116,7 @@ const Index = () => {
       <footer className="border-t border-border/50 py-8">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <DVCLogo className="w-6 h-6 text-primary" />
+            <DVCLogo variant="hero" className="w-6 h-6 text-primary" />
             <span className="font-semibold">Digital Visiting Card</span>
           </div>
           <div className="mb-4">

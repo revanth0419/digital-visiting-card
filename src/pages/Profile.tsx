@@ -108,14 +108,13 @@ const Profile = () => {
 
       setProfile(profileData);
 
-      // Profiles.id is the user_id
-      const profileUserId = profileData.id;
+      const userId = profileData.user_id;
 
       // Fetch books and music for this profile
       const { data: booksData } = await supabase
         .from("books" as any)
         .select("*")
-        .eq("user_id", profileUserId)
+        .eq("user_id", userId)
         .eq("show_on_profile", true)
         .order("created_at", { ascending: false }) as any;
       if (booksData) setBooks(booksData);
@@ -123,18 +122,18 @@ const Profile = () => {
       const { data: musicData } = await supabase
         .from("music_tracks" as any)
         .select("*")
-        .eq("user_id", profileUserId)
+        .eq("user_id", userId)
         .eq("show_on_profile", true)
         .order("created_at", { ascending: false }) as any;
       if (musicData) setMusicTracks(musicData as MusicTrack[]);
 
       // For subscriptions
-      if (user && profileUserId !== user.id) {
+      if (user && userId !== user.id) {
         const { data: subscription } = await supabase
           .from("subscriptions" as any)
           .select("*")
           .eq("subscriber_id", user.id)
-          .eq("subscribed_to_id", profileUserId)
+          .eq("subscribed_to_id", userId)
           .maybeSingle() as any;
         setIsSubscribed(!!subscription);
       }
@@ -142,9 +141,6 @@ const Profile = () => {
       // Generate signed URLs
       if (profileData.avatar_url) {
         const path = extractStoragePath(profileData.avatar_url) || profileData.avatar_url;
-        // Try both buckets just in case, but prioritize 'avatars' for profile pics if that was the convention, 
-        // or 'media' if migrated. The user request didn't specify changing avatar bucket, but 'media' bucket is for new media.
-        // We'll stick to 'avatars' for avatar_url as per existing code, unless it fails.
         const signedUrl = await getSignedUrl('avatars', path, 7200);
         if (signedUrl) setSignedAvatarUrl(signedUrl);
       } else {
@@ -162,7 +158,7 @@ const Profile = () => {
       const { data: linksData } = await supabase
         .from("links" as any)
         .select("*")
-        .eq("profile_id", profileUserId)
+        .eq("user_id", userId)
         .order("order_index", { ascending: true }) as any;
 
       if (linksData) {
@@ -172,7 +168,7 @@ const Profile = () => {
       const { data: mediaData } = await supabase
         .from("media" as any)
         .select("*")
-        .eq("profile_id", profileUserId)
+        .eq("user_id", userId)
         .order("order_index", { ascending: true }) as any;
 
       if (mediaData) {

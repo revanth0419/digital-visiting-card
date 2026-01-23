@@ -55,9 +55,16 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
         .from("profiles")
         .select("*")
         .eq("user_id", userId)
-        .single();
+        .eq("user_id", userId)
+        .maybeSingle();
 
       if (error) throw error;
+
+      if (!data) {
+        // Profile might be creating in background by trigger
+        console.log("Profile not found immediately, retrying or waiting...");
+        return;
+      }
 
       if (data) {
         setProfileId(data.id);
@@ -219,7 +226,7 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
 
       setBackgroundUrl(filePath);
       setBackgroundType("image");
-      
+
       toast({
         title: "Success",
         description: "Background uploaded! Click Save to apply.",
@@ -407,27 +414,24 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
               <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={() => setLayoutStyle("list")}
-                  className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${
-                    layoutStyle === "list" ? "border-primary bg-primary/10" : "border-border"
-                  }`}
+                  className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${layoutStyle === "list" ? "border-primary bg-primary/10" : "border-border"
+                    }`}
                 >
                   <LayoutList className="w-8 h-8 mx-auto mb-2" />
                   <p className="text-sm font-medium">List</p>
                 </button>
                 <button
                   onClick={() => setLayoutStyle("grid")}
-                  className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${
-                    layoutStyle === "grid" ? "border-primary bg-primary/10" : "border-border"
-                  }`}
+                  className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${layoutStyle === "grid" ? "border-primary bg-primary/10" : "border-border"
+                    }`}
                 >
                   <LayoutGrid className="w-8 h-8 mx-auto mb-2" />
                   <p className="text-sm font-medium">Grid</p>
                 </button>
                 <button
                   onClick={() => setLayoutStyle("compact")}
-                  className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${
-                    layoutStyle === "compact" ? "border-primary bg-primary/10" : "border-border"
-                  }`}
+                  className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${layoutStyle === "compact" ? "border-primary bg-primary/10" : "border-border"
+                    }`}
                 >
                   <Rows3 className="w-8 h-8 mx-auto mb-2" />
                   <p className="text-sm font-medium">Compact</p>
@@ -448,45 +452,40 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => setProfileTheme("default")}
-                  className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${
-                    profileTheme === "default" ? "border-primary bg-primary/10" : "border-border"
-                  }`}
+                  className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${profileTheme === "default" ? "border-primary bg-primary/10" : "border-border"
+                    }`}
                 >
                   <div className="h-12 rounded bg-gradient-to-br from-purple-500 to-blue-600 mb-2"></div>
                   <p className="text-sm font-medium">Default</p>
                 </button>
                 <button
                   onClick={() => setProfileTheme("light")}
-                  className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${
-                    profileTheme === "light" ? "border-primary bg-primary/10" : "border-border"
-                  }`}
+                  className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${profileTheme === "light" ? "border-primary bg-primary/10" : "border-border"
+                    }`}
                 >
                   <div className="h-12 rounded bg-white border-2 mb-2"></div>
                   <p className="text-sm font-medium">Light</p>
                 </button>
                 <button
                   onClick={() => setProfileTheme("dark")}
-                  className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${
-                    profileTheme === "dark" ? "border-primary bg-primary/10" : "border-border"
-                  }`}
+                  className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${profileTheme === "dark" ? "border-primary bg-primary/10" : "border-border"
+                    }`}
                 >
                   <div className="h-12 rounded bg-gray-900 mb-2"></div>
                   <p className="text-sm font-medium">Dark</p>
                 </button>
                 <button
                   onClick={() => setProfileTheme("gradient")}
-                  className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${
-                    profileTheme === "gradient" ? "border-primary bg-primary/10" : "border-border"
-                  }`}
+                  className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${profileTheme === "gradient" ? "border-primary bg-primary/10" : "border-border"
+                    }`}
                 >
                   <div className="h-12 rounded bg-gradient-to-br from-pink-500 via-purple-500 to-blue-500 mb-2"></div>
                   <p className="text-sm font-medium">Vibrant</p>
                 </button>
                 <button
                   onClick={() => setProfileTheme("minimal")}
-                  className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${
-                    profileTheme === "minimal" ? "border-primary bg-primary/10" : "border-border"
-                  }`}
+                  className={`p-4 border-2 rounded-lg transition-all hover:border-primary ${profileTheme === "minimal" ? "border-primary bg-primary/10" : "border-border"
+                    }`}
                 >
                   <div className="h-12 rounded bg-gradient-to-br from-gray-100 to-gray-200 border mb-2"></div>
                   <p className="text-sm font-medium">Minimal</p>

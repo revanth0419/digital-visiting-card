@@ -16,7 +16,7 @@ import PublicBook from "./pages/PublicBook";
 import NotFound from "./pages/NotFound";
 import HowToUse from "./pages/HowToUse";
 import RedirectToProfile from "./components/auth/RedirectToProfile";
-import { AuthProvider } from "./components/AuthProvider";
+import { AuthProvider } from "@/providers/AuthProvider";
 
 const queryClient = new QueryClient();
 

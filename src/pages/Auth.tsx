@@ -29,7 +29,8 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [expression, setExpression] = useState<Expression>("neutral");
-  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  // Removed heavy mousemove listener to improve performance
+  // const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const [isTypingPassword, setIsTypingPassword] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
@@ -37,14 +38,6 @@ const Auth = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setCursorPosition({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
 
   useEffect(() => {
     // Check if already logged in - but only redirect if session is valid
@@ -503,7 +496,7 @@ const Auth = () => {
                           <button
                             type="button"
                             onClick={handleResendVerification}
-                            className="text-xs text-muted-foreground hover:text-primary hover:underline"
+                            className="text-sm font-medium text-primary hover:underline transition-all"
                           >
                             Resend verification email
                           </button>

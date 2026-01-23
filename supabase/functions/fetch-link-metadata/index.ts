@@ -1,4 +1,6 @@
+// @ts-ignore
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// @ts-ignore
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const allowedOrigins = [
@@ -8,12 +10,35 @@ const allowedOrigins = [
 ];
 
 const corsHeaders = {
+  'Access-Control-Allow-Credentials': 'true',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Credentials': 'true',
 };
 
-serve(async (req) => {
+type RateLimitRecord = { count: number; resetAt: number };
+const rateBuckets = new Map<string, RateLimitRecord>();
+
+function checkRateLimit(key: string, max: number, windowMs: number): { allowed: boolean; retryAfterSeconds?: number } {
+  const now = Date.now();
+  const existing = rateBuckets.get(key);
+  const record: RateLimitRecord = existing && now < existing.resetAt
+    ? existing
+    : { count: 0, resetAt: now + windowMs };
+
+  if (record.count >= max) {
+    const retryAfterSeconds = Math.max(1, Math.ceil((record.resetAt - now) / 1000));
+    return { allowed: false, retryAfterSeconds };
+  }
+
+  record.count += 1;
+  rateBuckets.set(key, record);
+  return { allowed: true };
+}
+
+// @ts-ignore
+declare const Deno: any;
+
+serve(async (req: Request) => {
   const origin = req.headers.get('Origin');
   const isAllowed = origin && allowedOrigins.includes(origin);
   const headers = {

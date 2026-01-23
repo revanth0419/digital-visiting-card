@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import FallbackCover from "@/components/books/FallbackCover";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Loader2, BookOpen } from "lucide-react";
+import dvcLogo from "@/assets/branding/dvc-logo-circle.png";
 
 interface Chapter {
   type: string;
@@ -287,12 +288,14 @@ const PublicBook = () => {
     return null;
   };
 
+
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50">
       <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <img src="/dvc-logo.jpg" alt="Digital Visiting Card Logo" className="w-8 h-8 object-contain" />
+            <img src={dvcLogo} alt="Digital Visiting Card Logo" className="object-contain bg-black rounded-full border border-white/10 shadow-[0_0_20px_rgba(168,85,247,0.35)] w-[34px] h-[34px] md:w-[40px] md:h-[40px]" />
             <h1 className="text-2xl font-bold text-gradient">Digital Visiting Card</h1>
           </Link>
           <Link to="/auth">

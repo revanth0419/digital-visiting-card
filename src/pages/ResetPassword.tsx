@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Zap, Eye, EyeOff } from "lucide-react";
+import dvcLogo from "@/assets/branding/dvc-logo-circle.png";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
@@ -30,6 +31,8 @@ const ResetPassword = () => {
       }
     });
   }, [navigate, toast]);
+
+
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +84,7 @@ const ResetPassword = () => {
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <img src="/dvc-logo.jpg" alt="Digital Visiting Card Logo" className="w-10 h-10 object-contain" />
+            <img src={dvcLogo} alt="Digital Visiting Card Logo" className="object-contain bg-black rounded-full border border-white/10 shadow-[0_0_20px_rgba(168,85,247,0.35)] w-[34px] h-[34px] md:w-[40px] md:h-[40px]" />
             <h1 className="text-3xl font-bold text-gradient">Digital Visiting Card</h1>
           </div>
           <p className="text-muted-foreground">Set your new password</p>
