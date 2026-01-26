@@ -20,8 +20,8 @@ export const DVCLogo = ({ className, variant = "premium", ...props }: DVCLogoPro
                 // Navbar variant (formerly premium-green)
                 variant === "premium-green" && "bg-black rounded-full ring-1 ring-white/15 shadow-lg shadow-purple-500/20 hover:scale-105 transition-transform duration-300",
 
-                // Hero variant (center page) - Adding black bg
-                variant === "hero" && "bg-black rounded-full border-2 border-white/10 shadow-2xl shadow-purple-500/30",
+                // Hero variant (center page) - Removing black bg as per user request
+                variant === "hero" && "rounded-full shadow-purple-500/30",
                 className
             )}
             {...props}
