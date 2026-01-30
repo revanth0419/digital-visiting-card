@@ -73,7 +73,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
       // Generate signed URLs for all media
       const urls: Record<string, string> = {};
       if (data) {
-        for (const item of data) {
+        for (const item of (data as any[])) {
           const signedUrl = await getSignedUrl('media', item.url);
           if (signedUrl) {
             urls[item.id] = signedUrl;
