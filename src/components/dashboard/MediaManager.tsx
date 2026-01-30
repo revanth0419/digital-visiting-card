@@ -68,7 +68,7 @@ const MediaManager = ({ userId }: MediaManagerProps) => {
         .order("order_index", { ascending: true });
 
       if (error) throw error;
-      setMedia((data as Media[]) || []);
+      setMedia((data as any as Media[]) || []);
 
       // Generate signed URLs for all media
       const urls: Record<string, string> = {};
