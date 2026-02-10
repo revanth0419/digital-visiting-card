@@ -254,6 +254,12 @@ export type Database = {
           user_id: string
           username: string
           is_active: boolean | null
+          designation: string | null
+          company: string | null
+          location: string | null
+          website: string | null
+          public_phone: string | null
+          public_email: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -269,6 +275,13 @@ export type Database = {
           updated_at?: string | null
           user_id: string
           username: string
+          is_active?: boolean | null
+          designation?: string | null
+          company?: string | null
+          location?: string | null
+          website?: string | null
+          public_phone?: string | null
+          public_email?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -284,6 +297,13 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           username?: string
+          is_active?: boolean | null
+          designation?: string | null
+          company?: string | null
+          location?: string | null
+          website?: string | null
+          public_phone?: string | null
+          public_email?: string | null
         }
         Relationships: []
       }

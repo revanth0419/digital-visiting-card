@@ -78,7 +78,7 @@ const Dashboard = () => {
       .from("profiles")
       .select("username")
       .eq("user_id", session.user.id)
-      .eq("user_id", session.user.id)
+
       .maybeSingle();
 
     if (error || !profile?.username) {

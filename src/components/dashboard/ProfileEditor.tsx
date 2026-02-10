@@ -30,6 +30,15 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
   const [profileTheme, setProfileTheme] = useState("default");
   const [backgroundUrl, setBackgroundUrl] = useState("");
   const [backgroundType, setBackgroundType] = useState("gradient");
+
+  // New fields
+  const [designation, setDesignation] = useState("");
+  const [company, setCompany] = useState("");
+  const [location, setLocation] = useState("");
+  const [website, setWebsite] = useState("");
+  const [publicPhone, setPublicPhone] = useState("");
+  const [publicEmail, setPublicEmail] = useState("");
+
   const [signedAvatarUrl, setSignedAvatarUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
@@ -77,6 +86,14 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
         setProfileTheme(data.profile_theme || "default");
         setBackgroundUrl(data.background_url || "");
         setBackgroundType(data.background_type || "gradient");
+
+        // Set new fields
+        setDesignation(data.designation || "");
+        setCompany(data.company || "");
+        setLocation(data.location || "");
+        setWebsite(data.website || "");
+        setPublicPhone(data.public_phone || "");
+        setPublicEmail(data.public_email || "");
 
         // Get signed URL for avatar
         if (data.avatar_url) {
@@ -256,6 +273,12 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
           profile_theme: profileTheme,
           background_url: backgroundUrl,
           background_type: backgroundType,
+          designation,
+          company,
+          location,
+          website,
+          public_phone: publicPhone,
+          public_email: publicEmail,
         })
         .eq("user_id", userId);
 
@@ -382,6 +405,73 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
               <p className="text-xs text-muted-foreground text-right">
                 {bio.length}/200
               </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="designation">Designation</Label>
+                <Input
+                  id="designation"
+                  value={designation}
+                  onChange={(e) => setDesignation(e.target.value)}
+                  placeholder="Product Designer"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="company">Company</Label>
+                <Input
+                  id="company"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  placeholder="Acme Inc."
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="San Francisco, CA"
+              />
+            </div>
+
+            <div className="pt-4 border-t">
+              <h3 className="text-sm font-medium mb-3">Contact Information (Public)</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="publicPhone">Public Phone</Label>
+                    <Input
+                      id="publicPhone"
+                      value={publicPhone}
+                      onChange={(e) => setPublicPhone(e.target.value)}
+                      placeholder="+1 234 567 8900"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="publicEmail">Public Email</Label>
+                    <Input
+                      id="publicEmail"
+                      value={publicEmail}
+                      onChange={(e) => setPublicEmail(e.target.value)}
+                      placeholder="contact@example.com"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="website">Website</Label>
+                  <Input
+                    id="website"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    placeholder="https://yourwebsite.com"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Theme Color */}
