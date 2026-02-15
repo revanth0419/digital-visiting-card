@@ -262,10 +262,22 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
   const handleSave = async () => {
     setSaving(true);
 
+    // Validate username
+    if (username.length < 3 || username.length > 30 || !/^[a-zA-Z0-9_-]+$/.test(username)) {
+      toast({
+        title: "Invalid username",
+        description: "Username must be 3-30 characters and contain only letters, numbers, hyphens, and underscores.",
+        variant: "destructive",
+      });
+      setSaving(false);
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("profiles")
         .update({
+          username: username, // Added username update
           display_name: displayName,
           bio,
           theme_color: themeColor,
@@ -372,8 +384,9 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
               <Input
                 id="username"
                 value={username}
-                disabled
-                className="bg-muted"
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="johndoe"
+                className="bg-background"
               />
               <p className="text-xs text-muted-foreground">
                 Your profile URL: /u/{username}

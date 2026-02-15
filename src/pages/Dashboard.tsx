@@ -87,7 +87,7 @@ const Dashboard = () => {
         description: "Please complete your profile first.",
       });
     } else {
-      window.open(`/u/${profile.username}`, "_blank");
+      navigate(`/u/${profile.username}`);
     }
   };
 

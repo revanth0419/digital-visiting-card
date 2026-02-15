@@ -136,7 +136,7 @@ const QRCodeDisplay = ({ userId }: QRCodeDisplayProps) => {
             size={220}
             level="H"
             includeMargin
-            fgColor="hsl(270 91% 65%)"
+            fgColor="#000000"
           />
         </div>
 

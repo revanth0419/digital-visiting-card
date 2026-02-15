@@ -174,6 +174,26 @@ const Auth = () => {
     setLoading(false);
   };
 
+  const checkEmailExists = async (emailToCheck: string): Promise<boolean> => {
+    try {
+      // Call the RPC function we created in migration 002
+      const { data, error } = await supabase.rpc('check_email_exists', { 
+        email_arg: emailToCheck 
+      });
+      
+      if (error) {
+        console.warn("Error checking email existence (RPC might be missing):", error);
+        // Fallback: assume email doesn't exist if check fails, let signUp handle it
+        return false;
+      }
+      
+      return data as boolean;
+    } catch (err) {
+      console.error("Failed to check email:", err);
+      return false;
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -241,6 +261,19 @@ const Auth = () => {
           description: "Please make sure your passwords match.",
           variant: "destructive",
         });
+        setLoading(false);
+        return;
+      }
+
+      // Check for existing email before attempting signup
+      const emailExists = await checkEmailExists(email);
+      if (emailExists) {
+        toast({
+          title: "Email already registered",
+          description: "This email is already registered. Please log in or reset your password.",
+          variant: "destructive",
+        });
+        setIsLogin(true); // Switch to login mode
         setLoading(false);
         return;
       }
@@ -340,7 +373,7 @@ const Auth = () => {
           setIsLogin(true);
           setPassword("");
           setConfirmPassword("");
-
+          
           // Do NOT navigate to dashboard
         }
       }

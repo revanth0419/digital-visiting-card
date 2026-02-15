@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getSignedUrl, extractStoragePath } from "@/lib/storage";
 import { profileViewRateLimiter } from "@/lib/rate-limit";
@@ -73,6 +73,7 @@ type MusicTrack = {
 
 const Profile = () => {
   const { username } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [links, setLinks] = useState<Link[]>([]);
@@ -841,6 +842,27 @@ const Profile = () => {
 
       <div className="relative max-w-5xl mx-auto px-4 py-8 md:py-16">
 
+        {/* Back to Dashboard Button */}
+        {currentUserId && profile.user_id && currentUserId === profile.user_id && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="absolute top-4 left-4 z-50"
+          >
+            <Button
+              onClick={() => navigate("/dashboard")}
+              className="rounded-full shadow-lg gap-2"
+              style={{
+                background: themeColor,
+                color: "#fff"
+              }}
+            >
+              <Zap className="w-4 h-4" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </Button>
+          </motion.div>
+        )}
+
         {/* Profile Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -922,7 +944,7 @@ const Profile = () => {
 
               {profile.public_phone && (
                 <motion.a
-                  href={`https://wa.me/${profile.public_phone.replace(/[^0-9]/g, '')}`}
+                  href={`https://wa.me/${profile.public_phone.replace(/[^0-9]/g, '').length === 10 ? '91' + profile.public_phone.replace(/[^0-9]/g, '') : profile.public_phone.replace(/[^0-9]/g, '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   whileHover={{ scale: 1.05 }}
@@ -948,7 +970,7 @@ const Profile = () => {
 
               {profile.website && (
                 <motion.a
-                  href={profile.website}
+                  href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   whileHover={{ scale: 1.05 }}
@@ -1399,7 +1421,7 @@ const Profile = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1, duration: 0.5 }}
-        className="text-center mt-16 pt-8 border-t border-white/10"
+        className="text-center mt-16 pt-8 pb-8 border-t border-white/10"
       >
         <div className={`flex items-center justify-center gap-2 ${getTextColor()} opacity-50 hover:opacity-80 transition-opacity`}>
           <Zap className="w-4 h-4" />
@@ -1445,7 +1467,7 @@ const Profile = () => {
                   size={220}
                   level="H"
                   includeMargin={true}
-                  fgColor={themeColor}
+                  fgColor="#000000"
                   className="relative z-10"
                 />
               </motion.div>
