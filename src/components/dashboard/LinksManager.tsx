@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
-import { Plus, Trash2, GripVertical, Loader2 } from "lucide-react";
+import { Plus, Trash2, GripVertical, Loader2, Upload, X } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -108,7 +108,9 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   const [isShoppingLink, setIsShoppingLink] = useState(false);
   const [showInLinks, setShowInLinks] = useState(true);
   const [manualImageUrl, setManualImageUrl] = useState("");
-  const debounceTimer = useRef<NodeJS.Timeout>();
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const { toast } = useToast();
 
@@ -182,11 +184,6 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
 
       if (error) {
         console.error('Error fetching metadata:', error);
-        toast({
-          title: "Couldn't fetch preview",
-          description: "Unable to load product image. You can still add the link.",
-          variant: "default",
-        });
         return { imageUrl: null, title: null, price: null };
       }
 
@@ -230,6 +227,63 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
           setPreviewPrice(metadata.price);
         }
       }, 500);
+    }
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith('image/');
+    if (!isImage) {
+      toast({
+        title: "Invalid file",
+        description: "Please upload an image (JPG, PNG, WEBP)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 5242880) { // 5MB
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${userId}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('media')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(filePath);
+
+      setPreviewImage(publicUrl);
+      setManualImageUrl(publicUrl); // Use this to store the URL
+
+      toast({
+        title: "Success",
+        description: "Image uploaded successfully",
+      });
+
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      toast({
+        title: "Error uploading image",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -394,41 +448,63 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
             {previewImage && (
               <div className="mt-2 p-3 border rounded-lg bg-background/50 space-y-2">
                 <p className="text-xs text-muted-foreground">Product Preview:</p>
-                <img
-                  src={previewImage}
-                  alt="Link preview"
-                  className="w-24 h-24 object-cover rounded"
-                />
+                <div className="relative inline-block">
+                  <img
+                    src={previewImage}
+                    alt="Link preview"
+                    className="w-24 h-24 object-cover rounded"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full"
+                    onClick={() => {
+                      setPreviewImage(null);
+                      setManualImageUrl("");
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
                 {previewPrice && (
                   <p className="text-sm font-semibold text-primary">{previewPrice}</p>
                 )}
               </div>
             )}
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="manualImageUrl">Product Image URL (optional)</Label>
+            <Label>Product Image</Label>
+            <div className="flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="w-full"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {uploading ? "Uploading..." : "Upload Image"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground text-center">- OR -</p>
             <Input
               id="manualImageUrl"
               value={manualImageUrl}
-              onChange={(e) => setManualImageUrl(e.target.value)}
-              placeholder="https://example.com/product-image.jpg"
+              onChange={(e) => {
+                setManualImageUrl(e.target.value);
+                setPreviewImage(e.target.value);
+              }}
+              placeholder="Paste image URL directly"
             />
-            <p className="text-xs text-muted-foreground">
-              If automatic preview fails, paste the direct product image URL here
-            </p>
-            {manualImageUrl && (
-              <div className="mt-2 p-3 border rounded-lg bg-background/50 space-y-2">
-                <p className="text-xs text-muted-foreground">Manual Image Preview:</p>
-                <img
-                  src={manualImageUrl}
-                  alt="Manual preview"
-                  className="w-24 h-24 object-cover rounded"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              </div>
-            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="icon">Icon (emoji, optional)</Label>

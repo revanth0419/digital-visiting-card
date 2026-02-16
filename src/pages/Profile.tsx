@@ -670,8 +670,31 @@ const Profile = () => {
     if (links.length === 0) {
       return (
         <Card className={`${getCardStyle()} animate-fade-in`}>
-          <CardContent className="p-8 text-center">
-            <p className={`${getTextColor()} opacity-60`}>No links added yet.</p>
+          <CardContent className="p-16 text-center flex flex-col items-center gap-4">
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+            >
+              <motion.div
+                animate={{
+                  rotate: [0, -10, 10, -10, 0],
+                  scale: [1, 1.1, 1.1, 1.1, 1]
+                }}
+                transition={{
+                  duration: 2,
+                  ease: "easeInOut",
+                  times: [0, 0.2, 0.4, 0.6, 1],
+                  repeat: Infinity,
+                  repeatDelay: 3
+                }}
+                className="text-8xl mb-6 inline-block"
+              >
+                🔗
+              </motion.div>
+              <h3 className={`text-2xl font-bold mb-3 ${getTextColor()}`}>No links yet</h3>
+              <p className={`${getTextColor()} opacity-60`}>This user hasn't added any links.</p>
+            </motion.div>
           </CardContent>
         </Card>
       );
@@ -824,6 +847,40 @@ const Profile = () => {
         description: "vCard downloaded successfully",
       });
     }
+  };
+
+  const handleDownloadQR = () => {
+    const svg = document.getElementById("profile-qr-code");
+    if (!svg) return;
+
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx?.drawImage(img, 0, 0);
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `${profile?.username}-qr-code.png`;
+          link.click();
+          URL.revokeObjectURL(url);
+
+          toast({
+            title: "Success",
+            description: "QR code downloaded!",
+          });
+        }
+      });
+    };
+
+    img.src = "data:image/svg+xml;base64," + btoa(svgData);
   };
 
   return (
@@ -1149,8 +1206,31 @@ const Profile = () => {
                 )}
               </div>
             ) : (
-              <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-12 text-center border border-white/20">
-                <p className={`${getTextColor()} opacity-60 text-lg`}>No links added yet.</p>
+              <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-16 text-center border border-white/20">
+                <motion.div
+                  initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+                >
+                  <motion.div
+                    animate={{
+                      rotate: [0, -10, 10, -10, 0],
+                      scale: [1, 1.1, 1.1, 1.1, 1]
+                    }}
+                    transition={{
+                      duration: 2,
+                      ease: "easeInOut",
+                      times: [0, 0.2, 0.4, 0.6, 1],
+                      repeat: Infinity,
+                      repeatDelay: 3
+                    }}
+                    className="text-8xl mb-6 inline-block"
+                  >
+                    🔗
+                  </motion.div>
+                  <h3 className={`text-2xl font-bold mb-3 ${getTextColor()}`}>No links yet</h3>
+                  <p className={`${getTextColor()} opacity-60 text-lg max-w-md mx-auto`}>This user hasn't added any links.</p>
+                </motion.div>
               </div>
             )}
           </motion.div>
@@ -1183,8 +1263,31 @@ const Profile = () => {
             {media.length > 0 ? (
               renderMedia()
             ) : (
-              <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-12 text-center border border-white/20">
-                <p className={`${getTextColor()} opacity-60 text-lg`}>No media added yet.</p>
+              <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-16 text-center border border-white/20">
+                <motion.div
+                  initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+                >
+                  <motion.div
+                    animate={{
+                      rotate: [0, -5, 5, -5, 0],
+                      scale: [1, 1.05, 1.05, 1.05, 1]
+                    }}
+                    transition={{
+                      duration: 2,
+                      ease: "easeInOut",
+                      times: [0, 0.2, 0.4, 0.6, 1],
+                      repeat: Infinity,
+                      repeatDelay: 3
+                    }}
+                    className="text-8xl mb-6 inline-block"
+                  >
+                    🖼️
+                  </motion.div>
+                  <h3 className={`text-2xl font-bold mb-3 ${getTextColor()}`}>No media yet</h3>
+                  <p className={`${getTextColor()} opacity-60 text-lg max-w-md mx-auto`}>This user hasn't added any photos or videos.</p>
+                </motion.div>
               </div>
             )}
           </motion.div>
@@ -1463,6 +1566,7 @@ const Profile = () => {
                   style={{ background: themeColor }}
                 />
                 <QRCodeSVG
+                  id="profile-qr-code"
                   value={profileUrl}
                   size={220}
                   level="H"
@@ -1471,13 +1575,27 @@ const Profile = () => {
                   className="relative z-10"
                 />
               </motion.div>
-              <div className="text-center space-y-2">
-                <p className="text-sm font-medium text-foreground">
-                  Scan to visit profile
-                </p>
-                <p className="text-xs text-muted-foreground max-w-xs">
-                  Share your profile instantly by letting others scan this QR code
-                </p>
+              <div className="text-center space-y-4 w-full px-6">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Scan to visit profile
+                  </p>
+                  <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+                    Share your profile instantly by letting others scan this QR code
+                  </p>
+                </div>
+
+                <Button
+                  onClick={handleDownloadQR}
+                  className="w-full rounded-xl gap-2 font-semibold shadow-lg transition-transform hover:scale-105"
+                  style={{
+                    background: themeColor,
+                    color: '#ffffff'
+                  }}
+                >
+                  <Download className="w-4 h-4" />
+                  Download QR Code
+                </Button>
               </div>
             </div>
           </motion.div>
