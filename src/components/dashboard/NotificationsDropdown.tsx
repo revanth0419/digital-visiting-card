@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, LogIn } from "lucide-react";
+import { Bell, LogIn, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -22,6 +22,7 @@ interface Notification {
   message: string;
   is_read: boolean;
   created_at: string;
+  action_url?: string | null;
   actor?: {
     username: string;
     avatar_url: string | null;
@@ -45,7 +46,7 @@ const NotificationsDropdown = () => {
       setIsAuthenticated(true);
 
       const { data, error } = await supabase
-        .from("notifications")
+        .from("notifications" as any)
         .select(`
           *,
           actor:profiles!actor_id(username, avatar_url)
@@ -105,11 +106,34 @@ const NotificationsDropdown = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const handleNotificationClick = async (notification: Notification, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+
+    // Mark as read first
+    if (!notification.is_read) {
+      await markAsRead(notification.id);
+    }
+
+    // Handle redirection
+    if (notification.action_url) {
+      if (notification.action_url.startsWith('http')) {
+        window.open(notification.action_url, '_blank');
+      } else {
+        navigate(notification.action_url);
+      }
+    } else if (notification.actor?.username) {
+      // Fallback to actor's profile if no specific action_url
+      navigate(`/u/${notification.actor.username}`);
+    }
+
+    setOpen(false);
+  };
+
   const markAsRead = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     try {
       const { error } = await supabase
-        .from("notifications")
+        .from("notifications" as any)
         .update({ is_read: true } as any)
         .eq("id", id);
 
@@ -128,7 +152,7 @@ const NotificationsDropdown = () => {
       if (!session) return;
 
       const { error } = await supabase
-        .from("notifications")
+        .from("notifications" as any)
         .update({ is_read: true } as any)
         .eq("recipient_id", session.user.id);
 
@@ -208,9 +232,7 @@ const NotificationsDropdown = () => {
               <DropdownMenuItem
                 key={notification.id}
                 className={`flex flex-col items-start gap-1 p-3 cursor-pointer ${!notification.is_read ? "bg-accent/10" : ""}`}
-                onClick={(e) => {
-                  if (!notification.is_read) markAsRead(notification.id, e);
-                }}
+                onClick={(e) => handleNotificationClick(notification, e)}
               >
                 <div className="flex w-full items-start gap-3">
                   <Avatar className="h-8 w-8">

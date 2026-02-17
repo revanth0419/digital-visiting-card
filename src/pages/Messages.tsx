@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, ArrowLeft, Loader2, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { usePresence } from "@/hooks/usePresence";
 
 // Cast supabase to any to avoid type errors during development
 const supabaseClient = supabase as any;
@@ -44,10 +45,10 @@ export default function Messages() {
     // Search & Presence State
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
-    const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+    const { onlineUsers, isOnline } = usePresence();
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    // 1. Initialize Session & Presence
+    // 1. Initialize Session
     useEffect(() => {
         const init = async () => {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -57,34 +58,6 @@ export default function Messages() {
             }
             setCurrentUserId(session.user.id);
             fetchConversations(session.user.id);
-
-            // Initialize Presence
-            const presenceChannel = supabaseClient.channel('presence_v1', {
-                config: {
-                    presence: {
-                        key: session.user.id,
-                    },
-                },
-            });
-
-            presenceChannel
-                .on('presence', { event: 'sync' }, () => {
-                    const newState = presenceChannel.presenceState();
-                    const onlineIds = new Set<string>(Object.keys(newState));
-                    setOnlineUsers(onlineIds);
-                })
-                .subscribe(async (status: string) => {
-                    if (status === 'SUBSCRIBED') {
-                        await presenceChannel.track({
-                            online_at: new Date().toISOString(),
-                            user_id: session.user.id,
-                        });
-                    }
-                });
-
-            return () => {
-                supabaseClient.removeChannel(presenceChannel);
-            };
         };
         init();
     }, [navigate]);
@@ -153,7 +126,7 @@ export default function Messages() {
         return () => clearTimeout(delayDebounceFn);
     }, [searchQuery]);
 
-    // 3. Fetch Messages for Selected User
+    // 3. Fetch Messages for Selected User & Mark as Read
     useEffect(() => {
         if (!selectedUser || !currentUserId) return;
 
@@ -165,6 +138,16 @@ export default function Messages() {
                 .order("created_at", { ascending: true });
 
             if (data) setMessages(data);
+
+            // Mark unread messages from this user as read
+            const unreadIds = data?.filter((m: Message) => !m.is_read && m.sender_id === selectedUser.user_id).map((m: Message) => m.id);
+
+            if (unreadIds && unreadIds.length > 0) {
+                await supabaseClient
+                    .from("messages")
+                    .update({ is_read: true })
+                    .in("id", unreadIds);
+            }
         };
 
         fetchMessages();
@@ -180,10 +163,16 @@ export default function Messages() {
                     table: "messages",
                     filter: `receiver_id=eq.${currentUserId}`,
                 },
-                (payload) => {
+                async (payload: any) => {
                     const newMsg = payload.new as Message;
                     if (newMsg.sender_id === selectedUser.user_id) {
                         setMessages((prev) => [...prev, newMsg]);
+
+                        // Mark the new message as read immediately if we are viewing this conversation
+                        await supabaseClient
+                            .from("messages")
+                            .update({ is_read: true })
+                            .eq("id", newMsg.id);
                     }
                 }
             )
@@ -234,7 +223,7 @@ export default function Messages() {
         }
     };
 
-    const isOnline = (uid: string) => onlineUsers.has(uid);
+
 
     return (
         <div className="flex h-screen bg-background text-foreground">

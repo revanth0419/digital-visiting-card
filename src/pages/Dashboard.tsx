@@ -23,10 +23,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Menu } from "lucide-react";
+import { UnreadMessagesBadge } from "@/components/dashboard/UnreadMessagesBadge";
+import { usePresence } from "@/hooks/usePresence";
 
 const Dashboard = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Track presence
+  usePresence();
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -125,9 +130,7 @@ const Dashboard = () => {
               <SearchIcon className="w-5 h-5" />
             </Button>
 
-            <Button variant="ghost" size="icon" onClick={() => navigate("/messages")} title="Messages">
-              <MessageSquare className="w-5 h-5" />
-            </Button>
+            <UnreadMessagesBadge />
 
             <Button variant="ghost" size="icon" onClick={() => navigate("/connections")} title="Connections">
               <Users className="w-5 h-5" />
@@ -171,9 +174,14 @@ const Dashboard = () => {
                   <Eye className="w-4 h-4 mr-2" />
                   View Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/messages")} className="h-10 cursor-pointer">
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Messages
+                <DropdownMenuItem asChild>
+                  <div className="flex items-center h-10 cursor-pointer w-full" onClick={() => navigate("/messages")}>
+                    <div className="flex items-center w-full">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Messages
+                      <UnreadMessagesBadge className="ml-auto w-auto h-6 px-2" variant="ghost" />
+                    </div>
+                  </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/search")} className="h-10 cursor-pointer">
                   <SearchIcon className="w-4 h-4 mr-2" />
@@ -212,8 +220,8 @@ const Dashboard = () => {
             {/* Right Column */}
             <div className="space-y-6">
               <LinksManager userId={session.user.id} allowedCategory="link" title="Links" />
-              <LinksManager userId={session.user.id} allowedCategory="book" title="Books" />
               <MediaManager userId={session.user.id} />
+              <LinksManager userId={session.user.id} allowedCategory="book" title="Books" />
             </div>
           </div>
         </div>
