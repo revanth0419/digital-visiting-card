@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Share2, QrCode, Link2, ShoppingBag, ImageIcon, BookOpen, Music4, Zap, Heart, MapPin, Building2, Phone, Mail, Globe, Download, Copy } from "lucide-react";
+import { Share2, QrCode, Link2, ShoppingBag, ImageIcon, BookOpen, Zap, Heart, MapPin, Building2, Phone, Mail, Globe, Download, Copy, ArrowLeft } from "lucide-react";
 import { downloadVcf } from "@/utils/VcfGenerator";
 import {
   Dialog,
@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConnectButton } from "@/components/profile/ConnectButton";
+import NotificationsDropdown from "@/components/dashboard/NotificationsDropdown";
 
 type Profile = {
   id: string;
@@ -37,7 +38,7 @@ type Profile = {
   company: string | null;
   location: string | null;
   public_phone: string | null;
-  public_email: string | null;
+  public_email: string | null; // Added back
   website: string | null;
 };
 
@@ -50,6 +51,9 @@ type Link = {
   product_image_url: string | null;
   show_in_shop: boolean;
   price: string | null;
+  category: "link" | "book";
+  author?: string | null; // Added author
+  artist?: string | null; // Added artist
 };
 
 type Media = {
@@ -60,16 +64,7 @@ type Media = {
   description: string | null;
 };
 
-type MusicTrack = {
-  id: string;
-  title: string;
-  genre: string | null;
-  mood: string | null;
-  has_vocals: boolean;
-  audio_url: string | null;
-  cover_image_url: string | null;
-  created_at: string;
-};
+
 
 const Profile = () => {
   const { username } = useParams();
@@ -90,7 +85,7 @@ const Profile = () => {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [books, setBooks] = useState<any[]>([]);
-  const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
+
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -128,13 +123,7 @@ const Profile = () => {
         .order("created_at", { ascending: false }) as any;
       if (booksData) setBooks(booksData);
 
-      const { data: musicData } = await supabase
-        .from("music_tracks" as any)
-        .select("*")
-        .eq("user_id", userId)
-        .eq("show_on_profile", true)
-        .order("created_at", { ascending: false }) as any;
-      if (musicData) setMusicTracks(musicData as MusicTrack[]);
+
 
       // For subscriptions
       if (user && userId !== user.id) {
@@ -303,6 +292,12 @@ const Profile = () => {
     return "";
   };
 
+  const toCamelCase = (str: string) => {
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  };
+
+
+
   const getCardStyle = () => {
     if (profileTheme === "dark") return "bg-gray-800/80 border-gray-700";
     if (profileTheme === "light") return "bg-white/80 border-gray-200";
@@ -346,13 +341,41 @@ const Profile = () => {
     </div>
   );
 
-  // Render a section of links (either regular or shopping)
+  // Render a section of links (either regular, shopping, book, or music)
   const renderLinkSection = (sectionLinks: Link[], sectionTitle: string) => {
     const isShoppingSection = sectionTitle === "Shop";
     const displayedLinks = isShoppingSection && !showAllProducts
       ? sectionLinks.slice(0, 3)
       : sectionLinks;
     const hasMoreProducts = isShoppingSection && sectionLinks.length > 3;
+
+    // Helper to move category
+    const handleMoveCategory = async (linkId: string, newCategory: "link" | "book") => {
+      try {
+        const { error } = await supabase
+          .from("links")
+          .update({ category: newCategory } as any) // Cast to any to bypass stale types
+          .eq("id", linkId);
+
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: `Moved to ${newCategory}`,
+        });
+
+        // Optimistically update local state
+        setLinks(prevLinks => prevLinks.map(l => l.id === linkId ? { ...l, category: newCategory } : l));
+
+      } catch (error) {
+        console.error("Error moving category:", error);
+        toast({
+          title: "Error",
+          description: "Failed to move item.",
+          variant: "destructive"
+        });
+      }
+    };
 
     if (layoutStyle === "grid") {
       return (
@@ -418,6 +441,11 @@ const Profile = () => {
                             <h4 className={`font-bold text-lg ${getTextColor()} mb-2 line-clamp-2`}>
                               {link.title}
                             </h4>
+                            {(link.author || link.artist) && (
+                              <p className={`text-sm opacity-80 mb-2 ${getTextColor()}`}>
+                                {link.author ? `by ${link.author}` : link.artist ? `by ${link.artist}` : ""}
+                              </p>
+                            )}
                             {link.price && (
                               <p
                                 className="text-2xl font-bold mt-3"
@@ -427,15 +455,16 @@ const Profile = () => {
                               </p>
                             )}
                           </div>
-                          {!link.product_image_url && (
-                            <div
-                              className="w-10 h-10 rounded-xl flex items-center justify-center opacity-60 group-hover:opacity-100 transition-all duration-300"
-                              style={{ backgroundColor: `${themeColor}20` }}
-                            >
-                              <Link2 className="w-5 h-5" style={{ color: themeColor }} />
-                            </div>
-                          )}
                         </div>
+
+                        {!link.product_image_url && (
+                          <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center opacity-60 group-hover:opacity-100 transition-all duration-300"
+                            style={{ backgroundColor: `${themeColor}20` }}
+                          >
+                            <Link2 className="w-5 h-5" style={{ color: themeColor }} />
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </div>
@@ -517,6 +546,11 @@ const Profile = () => {
                           <h4 className={`font-semibold ${getTextColor()} truncate text-base`}>
                             {link.title}
                           </h4>
+                          {(link.author || link.artist) && (
+                            <p className={`text-xs opacity-80 ${getTextColor()}`}>
+                              {link.author ? `by ${link.author}` : link.artist ? `by ${link.artist}` : ""}
+                            </p>
+                          )}
                           {link.price && (
                             <p className="text-base font-bold mt-1" style={{ color: themeColor }}>
                               {link.price}
@@ -540,19 +574,19 @@ const Profile = () => {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex justify-center mt-6"
+              className="flex justify-center mt-8"
             >
               <Button
                 onClick={() => setShowAllProducts(!showAllProducts)}
                 size="lg"
-                className="rounded-2xl px-6"
+                className="rounded-2xl px-6 group"
                 style={{
                   background: `linear-gradient(135deg, ${themeColor}, ${themeColor}dd)`,
                   color: "white"
                 }}
               >
-                {showAllProducts ? "Show Less" : `View All (${sectionLinks.length})`}
-                <Link2 className={`ml-2 h-4 w-4 transition-transform duration-300 ${showAllProducts ? "rotate-180" : ""}`} />
+                {showAllProducts ? "Show Less" : `View All Products (${sectionLinks.length})`}
+                <Link2 className={`ml-2 h-5 w-5 transition-transform duration-300 ${showAllProducts ? "rotate-180" : ""}`} />
               </Button>
             </motion.div>
           )}
@@ -612,9 +646,16 @@ const Profile = () => {
                             {link.icon && !link.product_image_url && (
                               <span className="text-3xl flex-shrink-0">{link.icon}</span>
                             )}
-                            <span className={`font-bold text-lg ${getTextColor()} line-clamp-2`}>
-                              {link.title}
-                            </span>
+                            <div className="min-w-0">
+                              <span className={`font-bold text-lg ${getTextColor()} line-clamp-2`}>
+                                {link.title}
+                              </span>
+                              {(link.author || link.artist) && (
+                                <p className={`text-sm opacity-80 ${getTextColor()}`}>
+                                  {link.author ? `by ${link.author}` : link.artist ? `by ${link.artist}` : ""}
+                                </p>
+                              )}
+                            </div>
                           </div>
                           {link.price && (
                             <span
@@ -625,6 +666,23 @@ const Profile = () => {
                             </span>
                           )}
                         </div>
+
+                        {/* Access Control: Move Actions */}
+                        {currentUserId && profile?.user_id === currentUserId && (
+                          <div className="flex gap-1 ml-2" onClick={(e) => e.preventDefault()}>
+                            {link.category !== 'link' && (
+                              <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={(e) => { e.stopPropagation(); handleMoveCategory(link.id, 'link'); }}>
+                                To Link
+                              </Button>
+                            )}
+                            {link.category !== 'book' && (
+                              <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={(e) => { e.stopPropagation(); handleMoveCategory(link.id, 'book'); }}>
+                                To Book
+                              </Button>
+                            )}
+                          </div>
+                        )}
+
                         {!link.product_image_url && (
                           <div
                             className="w-12 h-12 rounded-2xl flex items-center justify-center ml-4 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-all duration-300"
@@ -667,6 +725,11 @@ const Profile = () => {
 
   // Render links based on layout
   const renderLinks = () => {
+    // Books Section
+    const bookLinks = links.filter(l => l.category === 'book');
+    // Default to 'link' if category is missing or is 'link'
+    const regularLinks = links.filter(l => !l.category || l.category === 'link');
+
     if (links.length === 0) {
       return (
         <Card className={`${getCardStyle()} animate-fade-in`}>
@@ -701,14 +764,35 @@ const Profile = () => {
     }
 
     return (
-      <div>
-        {linksTabItems.filter(link => !link.show_in_shop).length > 0 && (
-          renderLinkSection(linksTabItems.filter(link => !link.show_in_shop), "Links")
+      <div className="space-y-12">
+        {/* Books Section */}
+        {bookLinks.length > 0 && (
+          <div>
+            <h3 className={`text-2xl font-bold mb-6 ${getTextColor()} flex items-center gap-2`}>
+              <BookOpen className="w-6 h-6" /> Books
+            </h3>
+            {renderLinkSection(bookLinks, "Books")}
+          </div>
         )}
-        {linksTabItems.filter(link => link.show_in_shop).length > 0 && (
+
+        {/* Music Section Removed */}
+
+        {/* Regular Links */}
+        {regularLinks.filter(link => !link.show_in_shop).length > 0 && (
+          <div>
+            {/* Only show title if we have other sections */}
+            {(bookLinks.length > 0) && (
+              <h3 className={`text-2xl font-bold mb-6 ${getTextColor()}`}>Links</h3>
+            )}
+            {renderLinkSection(regularLinks.filter(link => !link.show_in_shop), "Links")}
+          </div>
+        )}
+
+        {/* Shop Section */}
+        {regularLinks.filter(link => link.show_in_shop).length > 0 && (
           <div>
             <h3 className={`text-2xl font-bold mb-6 ${getTextColor()}`}>Featured Products</h3>
-            {renderLinkSection(linksTabItems.filter(link => link.show_in_shop), "Shop")}
+            {renderLinkSection(regularLinks.filter(link => link.show_in_shop), "Shop")}
           </div>
         )}
       </div>
@@ -884,7 +968,26 @@ const Profile = () => {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-500 ${getThemeClasses()}`}>
+    <div className={`min-h-screen relative transition-colors duration-500 font-sans`} style={getThemeBackground()}>
+      {/* Back Button */}
+      {currentUserId && (
+        <div className="fixed top-4 left-4 z-50">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full shadow-lg backdrop-blur-md bg-background/50 border-white/20 hover:bg-background/80"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+        </div>
+      )}
+
+      {/* Notifications (Right) */}
+      <div className="fixed top-4 right-4 z-50">
+        <NotificationsDropdown />
+      </div>
       {/* Animated Background Particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute w-96 h-96 -top-48 -left-48 bg-primary/20 rounded-full blur-3xl animate-pulse" />
@@ -900,25 +1003,7 @@ const Profile = () => {
       <div className="relative max-w-5xl mx-auto px-4 py-8 md:py-16">
 
         {/* Back to Dashboard Button */}
-        {currentUserId && profile.user_id && currentUserId === profile.user_id && (
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="absolute top-4 left-4 z-50"
-          >
-            <Button
-              onClick={() => navigate("/dashboard")}
-              className="rounded-full shadow-lg gap-2"
-              style={{
-                background: themeColor,
-                color: "#fff"
-              }}
-            >
-              <Zap className="w-4 h-4" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </Button>
-          </motion.div>
-        )}
+
 
         {/* Profile Header */}
         <motion.div
@@ -1009,7 +1094,9 @@ const Profile = () => {
                   className="flex items-center justify-center w-14 h-14 rounded-full bg-[#25D366] text-white shadow-lg shadow-[#25D366]/30 transition-transform hover:shadow-xl"
                   title="WhatsApp"
                 >
-                  <svg viewBox="0 0 24 24" className="w-7 h-7 fill-current" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.008-.57-.008-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.355-5.033c0-5.457 4.433-10 9.881-10 2.638 0 5.118 1.026 6.983 2.887 1.865 1.866 2.893 4.352 2.894 6.994 0 5.456-4.435 9.897-9.884 9.897M12 2C6.477 2 2 6.477 2 12c0 1.9.529 3.684 1.455 5.234L2.298 22l4.902-1.21A9.972 9.972 0 0112 22c5.523 0 10-4.477 10-10S17.523 2 12 2" /></svg>
+                  <svg viewBox="0 0 24 24" className="w-8 h-8 fill-current" aria-hidden="true">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.008-.57-.008-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.355-5.033c0-5.457 4.433-10 9.881-10 2.638 0 5.118 1.026 6.983 2.887 1.865 1.866 2.893 4.352 2.894 6.994 0 5.456-4.435 9.897-9.884 9.897" />
+                  </svg>
                 </motion.a>
               )}
 
@@ -1070,14 +1157,22 @@ const Profile = () => {
               </p>
             )}
 
-            {/* Subscribe Button (only show if viewing someone else's profile and logged in) */}
+            {/* Subscribe & Message Buttons */}
             {currentUserId && profile.user_id && currentUserId !== profile.user_id && (
-              <ConnectButton
-                targetUserId={profile.user_id}
-                initialIsConnected={isSubscribed}
-                onConnectionChange={(connected) => setIsSubscribed(connected)}
-                className="mb-8"
-              />
+              <div className="flex items-center justify-center gap-4 mb-8">
+                <ConnectButton
+                  targetUserId={profile.user_id}
+                  initialIsConnected={isSubscribed}
+                  onConnectionChange={(connected) => setIsSubscribed(connected)}
+                />
+                <Button
+                  onClick={() => navigate(`/messages/${profile.user_id}`)}
+                  variant="outline"
+                  className="rounded-full px-6"
+                >
+                  Message
+                </Button>
+              </div>
             )}
 
             {/* QR Code Button with Pulse Effect */}
@@ -1113,7 +1208,7 @@ const Profile = () => {
         className="mb-12"
       >
         <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-2 shadow-xl border border-white/20 max-w-xl mx-auto">
-          <div className="grid grid-cols-5 gap-1 relative">
+          <div className="grid grid-cols-4 gap-1 relative">
             {/* Animated Background Slider */}
             <motion.div
               layoutId="activeTab"
@@ -1121,17 +1216,15 @@ const Profile = () => {
               style={{
                 background: `linear-gradient(135deg, ${themeColor}, ${themeColor}cc)`,
                 boxShadow: `0 4px 20px ${themeColor}50`,
-                width: "calc(20% - 4px)",
+                width: "calc(25% - 4px)",
                 left:
                   activeTab === "links"
                     ? "4px"
                     : activeTab === "shop"
-                      ? "calc(20% + 2px)"
+                      ? "calc(25% + 2px)"
                       : activeTab === "gallery"
-                        ? "calc(40% + 0px)"
-                        : activeTab === "books"
-                          ? "calc(60% - 2px)"
-                          : "calc(80% - 4px)",
+                        ? "calc(50% + 0px)"
+                        : "calc(75% - 2px)",
               }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             />
@@ -1171,14 +1264,7 @@ const Profile = () => {
               <BookOpen className="w-4 h-4" />
               <span className="hidden sm:inline">Books</span>
             </button>
-            <button
-              onClick={() => setActiveTab("music")}
-              className={`relative z-10 py-3 px-2 rounded-2xl font-semibold text-xs transition-colors duration-300 flex items-center justify-center gap-1 ${activeTab === "music" ? "text-white" : `${getTextColor()} opacity-60`
-                }`}
-            >
-              <Music4 className="w-4 h-4" />
-              <span className="hidden sm:inline">Music</span>
-            </button>
+
           </div>
         </div>
       </motion.div>
@@ -1412,111 +1498,7 @@ const Profile = () => {
           </motion.div>
         )}
 
-        {activeTab === "music" && (
-          <motion.div
-            key="music"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-4"
-          >
-            {musicTracks.length === 0 ? (
-              <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl p-12 text-center border border-white/20">
-                <motion.div
-                  initial={{ opacity: 0, y: 30, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
-                >
-                  <motion.div
-                    animate={{
-                      rotate: [0, -5, 5, -5, 0],
-                      scale: [1, 1.05, 1.05, 1.05, 1]
-                    }}
-                    transition={{
-                      duration: 2,
-                      ease: "easeInOut",
-                      times: [0, 0.2, 0.4, 0.6, 1],
-                      repeat: Infinity,
-                      repeatDelay: 3
-                    }}
-                    className="text-8xl mb-6 inline-block"
-                  >
-                    🎵
-                  </motion.div>
-                  <h3 className={`text-2xl font-bold mb-3 ${getTextColor()}`}>No music yet</h3>
-                  <p className={`text-base ${getTextColor()} opacity-70 max-w-md mx-auto`}>
-                    This user hasn't shared any music tracks yet.
-                  </p>
-                </motion.div>
-              </div>
-            ) : (
-              <div className={`grid gap-6 ${layoutStyle === "grid" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-                <AnimatePresence>
-                  {musicTracks.map((track, index) => (
-                    <motion.div
-                      key={track.id}
-                      className="block group"
-                      initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -30, scale: 0.95 }}
-                      transition={{
-                        duration: 0.4,
-                        delay: index * 0.08,
-                        ease: [0.23, 1, 0.32, 1]
-                      }}
-                    >
-                      <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-3xl overflow-hidden border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 relative group">
-                        <div
-                          className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"
-                          style={{
-                            background: `linear-gradient(135deg, ${themeColor}80, transparent)`,
-                            filter: "blur(20px)",
-                            transform: "scale(1.05)"
-                          }}
-                        />
 
-                        <div className="p-0">
-                          {track.cover_image_url ? (
-                            <div className="relative overflow-hidden aspect-square max-h-48">
-                              <img
-                                src={track.cover_image_url}
-                                alt={track.title}
-                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                loading="lazy"
-                              />
-                            </div>
-                          ) : (
-                            <div
-                              className="aspect-square max-h-48 flex items-center justify-center"
-                              style={{ background: `linear-gradient(135deg, ${themeColor}40, ${themeColor}20)` }}
-                            >
-                              <Music4 className="w-16 h-16" style={{ color: themeColor }} />
-                            </div>
-                          )}
-                          <div className="p-5">
-                            <h4 className={`font-bold text-lg ${getTextColor()} mb-2 line-clamp-2`}>
-                              {track.title}
-                            </h4>
-                            <p className={`text-sm ${getTextColor()} opacity-70`}>
-                              {track.genre} • {track.mood} • {track.has_vocals ? "With Vocals" : "Instrumental"}
-                            </p>
-                            {track.audio_url && (
-                              <audio controls src={track.audio_url} className="w-full mt-3 h-8" />
-                            )}
-                            <p className="text-xs mt-3 opacity-50" style={{ color: themeColor }}>
-                              {track.created_at ? new Date(track.created_at).toLocaleDateString() : "Recently created"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-            )}
-          </motion.div>
-        )}
       </AnimatePresence>
 
       {/* Footer */}

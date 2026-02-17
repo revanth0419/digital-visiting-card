@@ -36,6 +36,9 @@ type Link = {
   show_in_shop: boolean;
   show_in_links: boolean;
   price: string | null;
+  category: "link" | "book";
+  author?: string | null;
+  artist?: string | null;
 };
 
 type LinksManagerProps = {
@@ -77,7 +80,14 @@ const SortableLink = ({
           {link.icon && <span>{link.icon}</span>}
           <div className="flex-1 min-w-0">
             <p className="font-medium truncate">{link.title}</p>
-            <p className="text-xs text-muted-foreground truncate">{link.url}</p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs px-1.5 py-0.5 rounded bg-muted uppercase tracking-wider font-semibold">
+                {link.category || "link"}
+              </span>
+              <p className="text-xs text-muted-foreground truncate">{link.url}</p>
+              {link.author && <p className="text-xs text-muted-foreground truncate">by {link.author}</p>}
+              {link.artist && <p className="text-xs text-muted-foreground truncate">by {link.artist}</p>}
+            </div>
           </div>
         </div>
       </div>
@@ -93,7 +103,7 @@ const SortableLink = ({
   );
 };
 
-const LinksManager = ({ userId }: LinksManagerProps) => {
+const LinksManager = ({ userId, allowedCategory, title = "Links" }: LinksManagerProps & { allowedCategory?: "link" | "book", title?: string }) => {
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -103,11 +113,14 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   const [newTitle, setNewTitle] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const [newIcon, setNewIcon] = useState("");
+  const [newAuthor, setNewAuthor] = useState("");
+  const [newArtist, setNewArtist] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [previewPrice, setPreviewPrice] = useState<string | null>(null);
   const [isShoppingLink, setIsShoppingLink] = useState(false);
   const [showInLinks, setShowInLinks] = useState(true);
   const [manualImageUrl, setManualImageUrl] = useState("");
+  const [newCategory, setNewCategory] = useState<"link" | "book">("link");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -122,19 +135,36 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   );
 
   useEffect(() => {
+    if (allowedCategory) {
+      setNewCategory(allowedCategory);
+    }
+  }, [allowedCategory]);
+
+  useEffect(() => {
     fetchLinks();
-  }, [userId]);
+  }, [userId, allowedCategory]);
 
   const fetchLinks = async () => {
     try {
       setLoading(true);
 
-      // Get links directly using userId
-      const { data, error } = await supabase
+      let query: any = supabase
         .from("links")
         .select("*")
         .eq("user_id", userId)
         .order("order_index", { ascending: true });
+
+      if (allowedCategory) {
+        query = query.eq("category", allowedCategory);
+      } else {
+        // If no strict category, maybe show all? Or typically 'link' defaults?
+        // For now, if no allowedCategory is passed, we might want to show everything or just 'link'.
+        // But per requirements, we are splitting everything.
+        // Let's assume if no allowedCategory, we show everything (legacy behavior) or filter.
+        // But dashboard will use specific ones.
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Failed to fetch links:", error);
@@ -145,7 +175,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
         });
         setLinks([]);
       } else {
-        setLinks(data || []);
+        setLinks((data as any) || []);
       }
     } catch (err) {
       console.error("Unexpected error fetching links:", err);
@@ -268,7 +298,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
       const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(filePath);
 
       setPreviewImage(publicUrl);
-      setManualImageUrl(publicUrl); // Use this to store the URL
+      setManualImageUrl(publicUrl);
 
       toast({
         title: "Success",
@@ -325,21 +355,29 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
         title: newTitle,
         url: normalizedUrl,
         icon: newIcon || null,
+        author: newAuthor || null, // Add author
+        artist: newArtist || null, // Add artist
         show_in_shop: isShoppingLink,
         show_in_links: showInLinks,
         product_image_url: manualImageUrl || previewImage,
+        category: allowedCategory || newCategory, // Enforce allowed category
       });
 
       if (error) throw error;
 
       toast({
-        title: "Link added!",
-        description: "Your new link has been created.",
+        title: `${title} added!`,
+        description: `Your new ${title.toLowerCase().slice(0, -1)} has been created.`,
       });
+
+      // Notification handled by Database Trigger now
+
 
       setNewTitle("");
       setNewUrl("");
       setNewIcon("");
+      setNewAuthor("");
+      setNewArtist("");
       setPreviewImage(null);
       setPreviewPrice(null);
       setIsShoppingLink(false);
@@ -363,8 +401,8 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
       if (error) throw error;
 
       toast({
-        title: "Link deleted",
-        description: "The link has been removed.",
+        title: "Item deleted",
+        description: "The item has been removed.",
       });
       fetchLinks();
     } catch (error: any) {
@@ -389,9 +427,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
     const newLinks = arrayMove(links, oldIndex, newIndex);
     setLinks(newLinks);
 
-    // Update order in database
     for (let i = 0; i < newLinks.length; i++) {
-      // We catch error individually to not break the entire loop
       const { error } = await supabase
         .from("links")
         .update({ order_index: i })
@@ -416,21 +452,36 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
   return (
     <Card className="glass-card border-2">
       <CardHeader>
-        <CardTitle>Links</CardTitle>
-        <CardDescription>Manage your profile links</CardDescription>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>Manage your {title.toLowerCase()}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Add Link Form */}
         <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
           <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">{allowedCategory === 'book' ? 'Book Title' : 'Title'}</Label>
             <Input
               id="title"
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="My Awesome Link"
+              placeholder={allowedCategory === 'book' ? "The Great Gatsby" : "My Awesome Link"}
             />
           </div>
+
+          {/* Conditional Inputs for Author/Artist */}
+          {allowedCategory === 'book' && (
+            <div className="space-y-2">
+              <Label htmlFor="author">Author Name (Optional)</Label>
+              <Input
+                id="author"
+                value={newAuthor}
+                onChange={(e) => setNewAuthor(e.target.value)}
+                placeholder="F. Scott Fitzgerald"
+              />
+            </div>
+          )}
+
+
+
           <div className="space-y-2">
             <Label htmlFor="url">URL</Label>
             <Input
@@ -447,7 +498,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
             )}
             {previewImage && (
               <div className="mt-2 p-3 border rounded-lg bg-background/50 space-y-2">
-                <p className="text-xs text-muted-foreground">Product Preview:</p>
+                <p className="text-xs text-muted-foreground">Preview:</p>
                 <div className="relative inline-block">
                   <img
                     src={previewImage}
@@ -475,7 +526,7 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label>Product Image</Label>
+            <Label>{allowedCategory === 'book' ? 'Cover Image' : 'Image'}</Label>
             <div className="flex gap-2">
               <input
                 ref={fileInputRef}
@@ -506,42 +557,54 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
               placeholder="Paste image URL directly"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="icon">Icon (emoji, optional)</Label>
-            <Input
-              id="icon"
-              value={newIcon}
-              onChange={(e) => setNewIcon(e.target.value)}
-              placeholder="🔗"
-              maxLength={2}
-            />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="showInLinks"
-                checked={showInLinks}
-                onChange={(e) => setShowInLinks(e.target.checked)}
-                className="w-4 h-4 rounded border-input"
+
+          {allowedCategory === 'link' && (
+            <div className="space-y-2">
+              <Label htmlFor="icon">Icon (emoji, optional)</Label>
+              <Input
+                id="icon"
+                value={newIcon}
+                onChange={(e) => setNewIcon(e.target.value)}
+                placeholder="🔗"
+                maxLength={2}
               />
-              <Label htmlFor="showInLinks" className="cursor-pointer">
-                Show in Links section
-              </Label>
             </div>
+          )}
+
+          {allowedCategory === 'link' && (
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
-                id="isShoppingLink"
+                id="showInShop"
                 checked={isShoppingLink}
                 onChange={(e) => setIsShoppingLink(e.target.checked)}
-                className="w-4 h-4 rounded border-input"
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               />
-              <Label htmlFor="isShoppingLink" className="cursor-pointer">
-                Show in Shop section
+              <Label htmlFor="showInShop" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Show in Shop Section
               </Label>
             </div>
-          </div>
+          )}
+
+          {!allowedCategory && (
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <div className="flex gap-2">
+                {["link", "book"].map((cat) => (
+                  <Button
+                    key={cat}
+                    type="button"
+                    variant={newCategory === cat ? "default" : "outline"}
+                    onClick={() => setNewCategory(cat as any)}
+                    className="flex-1 capitalize"
+                  >
+                    {cat}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <Button
             onClick={handleAddLink}
             disabled={adding}
@@ -556,13 +619,12 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
             ) : (
               <>
                 <Plus className="w-4 h-4 mr-2" />
-                Add Link
+                Add {allowedCategory ? (allowedCategory === 'book' ? 'Book' : 'Link') : 'Link'}
               </>
             )}
           </Button>
         </div>
 
-        {/* Links List */}
         {links.length > 0 ? (
           <DndContext
             sensors={sensors}
@@ -579,8 +641,8 @@ const LinksManager = ({ userId }: LinksManagerProps) => {
           </DndContext>
         ) : (
           <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-            <p className="text-lg font-medium mb-1">No links yet</p>
-            <p className="text-sm">Click "Add Link" above to get started sharing your content!</p>
+            <p className="text-lg font-medium mb-1">No {title.toLowerCase()} yet</p>
+            <p className="text-sm">Click "Add {allowedCategory === 'book' ? 'Book' : 'Link'}" above to get started!</p>
           </div>
         )}
       </CardContent>

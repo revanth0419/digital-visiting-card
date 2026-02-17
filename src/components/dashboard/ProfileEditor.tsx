@@ -300,6 +300,30 @@ const ProfileEditor = ({ userId }: ProfileEditorProps) => {
         title: "Success!",
         description: "Profile updated successfully.",
       });
+
+      // Notify followers about profile update
+      try {
+        // 1. Get followers
+        const { data: followers } = await supabase
+          .from("subscriptions")
+          .select("subscriber_id")
+          .eq("subscribed_to_id", userId);
+
+        if (followers && followers.length > 0) {
+          // 2. Create notifications
+          const notifications = followers.map(f => ({
+            recipient_id: f.subscriber_id,
+            actor_id: userId,
+            type: "update_profile",
+            message: `${displayName || username} updated their profile`,
+            is_read: false
+          }));
+
+          await supabase.from("notifications").insert(notifications as any);
+        }
+      } catch (notifyError) {
+        console.error("Failed to notify followers:", notifyError);
+      }
     } catch (error: any) {
       toast({
         title: "Error",

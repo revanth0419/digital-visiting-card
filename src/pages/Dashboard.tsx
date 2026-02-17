@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Zap, Eye, Search as SearchIcon, HelpCircle } from "lucide-react";
+import { LogOut, Zap, Eye, Search as SearchIcon, HelpCircle, Users, MessageSquare } from "lucide-react";
 
 import NotificationsDropdown from "@/components/dashboard/NotificationsDropdown";
 import ProfileEditor from "@/components/dashboard/ProfileEditor";
@@ -125,6 +125,14 @@ const Dashboard = () => {
               <SearchIcon className="w-5 h-5" />
             </Button>
 
+            <Button variant="ghost" size="icon" onClick={() => navigate("/messages")} title="Messages">
+              <MessageSquare className="w-5 h-5" />
+            </Button>
+
+            <Button variant="ghost" size="icon" onClick={() => navigate("/connections")} title="Connections">
+              <Users className="w-5 h-5" />
+            </Button>
+
             <Button variant="ghost" size="icon" onClick={() => navigate("/how-to-use")} title="Help">
               <HelpCircle className="w-5 h-5" />
             </Button>
@@ -163,6 +171,10 @@ const Dashboard = () => {
                   <Eye className="w-4 h-4 mr-2" />
                   View Profile
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/messages")} className="h-10 cursor-pointer">
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Messages
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/search")} className="h-10 cursor-pointer">
                   <SearchIcon className="w-4 h-4 mr-2" />
                   Search
@@ -199,7 +211,8 @@ const Dashboard = () => {
 
             {/* Right Column */}
             <div className="space-y-6">
-              <LinksManager userId={session.user.id} />
+              <LinksManager userId={session.user.id} allowedCategory="link" title="Links" />
+              <LinksManager userId={session.user.id} allowedCategory="book" title="Books" />
               <MediaManager userId={session.user.id} />
             </div>
           </div>

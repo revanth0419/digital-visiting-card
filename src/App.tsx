@@ -17,6 +17,8 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Search = lazy(() => import("./pages/Search"));
+const Connections = lazy(() => import("./pages/Connections")); // Add Connections import
+const Messages = lazy(() => import("./pages/Messages"));
 const PublicBook = lazy(() => import("./pages/PublicBook"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const HowToUse = lazy(() => import("./pages/HowToUse"));
@@ -92,6 +94,26 @@ const AnimatedRoutes = () => {
             >
               <Search />
             </motion.div>
+          } />
+          <Route path="/connections" element={
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Connections />
+            </motion.div>
+          } />
+          <Route path="/messages" element={
+            <Suspense fallback={<PageLoader />}>
+              <Messages />
+            </Suspense>
+          } />
+          <Route path="/messages/:userId" element={
+            <Suspense fallback={<PageLoader />}>
+              <Messages />
+            </Suspense>
           } />
           <Route path="/books/:id" element={
             <motion.div

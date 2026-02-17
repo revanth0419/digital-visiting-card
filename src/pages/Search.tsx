@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Search as SearchIcon, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { ConnectButton } from "@/components/profile/ConnectButton";
 
 interface Profile {
   id: string;
@@ -15,7 +16,7 @@ interface Profile {
   display_name: string | null;
   bio: string | null;
   avatar_url: string | null;
-  user_id?: string; // Optional since public_profiles doesn't have it
+  user_id: string;
   isSubscribed?: boolean;
 }
 
@@ -45,9 +46,9 @@ export default function Search() {
   const searchProfiles = async () => {
     setLoading(true);
     try {
-      // Search profiles using public_profiles view to avoid exposing user_id
+      // Search profiles using profiles table to functionality
       const { data: profilesData, error: profilesError } = await supabase
-        .from("public_profiles")
+        .from("profiles")
         .select("*")
         .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
         .limit(20);
@@ -55,9 +56,8 @@ export default function Search() {
       if (profilesError) throw profilesError;
 
       if (profilesData) {
-        // For public search, we don't check subscriptions since we don't have user_id
         // Filter out any null username entries
-        const validProfiles = profilesData.filter(p => p.username && p.id);
+        const validProfiles = profilesData.filter(p => p.username && p.id && p.user_id);
 
         // Fetch current user's subscriptions to determine isSubscribed status
         let subscribedIds = new Set<string>();
@@ -74,9 +74,9 @@ export default function Search() {
 
         setProfiles(validProfiles.map(p => ({
           ...p,
-          id: p.id!,
+          id: p.id,
           username: p.username,
-          isSubscribed: subscribedIds.has(p.id!)
+          isSubscribed: subscribedIds.has(p.user_id)
         })));
       }
     } catch (error) {
@@ -85,17 +85,6 @@ export default function Search() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSubscribe = async (profile: Profile) => {
-    if (!currentUserId) {
-      toast.error("Please log in to subscribe");
-      return;
-    }
-
-    // Since public_profiles doesn't have user_id, subscription via search is disabled
-    // Users can subscribe from the profile page directly
-    toast.error("Please visit the profile page to subscribe");
   };
 
   return (
@@ -120,7 +109,7 @@ export default function Search() {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
               Discover Profiles
             </h1>
-            <p className="text-muted-foreground">Find and subscribe to other users</p>
+            <p className="text-muted-foreground">Find and connect with other users</p>
           </div>
 
           <div className="relative">
@@ -175,8 +164,14 @@ export default function Search() {
                       )}
                     </div>
 
-                    <div className="flex flex-col gap-2 min-w-[100px]">
-
+                    <div className="flex flex-col gap-2 min-w-[120px]">
+                      {currentUserId && currentUserId !== profile.user_id && (
+                        <ConnectButton
+                          targetUserId={profile.user_id}
+                          initialIsConnected={!!profile.isSubscribed}
+                          className="w-full"
+                        />
+                      )}
                       <Button
                         variant="outline"
                         size="sm"

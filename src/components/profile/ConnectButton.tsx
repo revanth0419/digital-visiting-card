@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { UserPlus, UserCheck, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { apiFetch } from "@/lib/api";
 
 interface ConnectButtonProps {
     targetUserId: string;
@@ -30,19 +29,57 @@ export const ConnectButton = ({ targetUserId, initialIsConnected, onConnectionCh
                 return;
             }
 
-            const endpoint = isConnected
-                ? `/users/${targetUserId}/disconnect`
-                : `/users/${targetUserId}/connect`;
+            if (isConnected) {
+                // Disconnect
+                const { error } = await supabase
+                    .from("subscriptions")
+                    .delete()
+                    .eq("subscriber_id", session.user.id)
+                    .eq("subscribed_to_id", targetUserId);
 
-            const { error } = await apiFetch(endpoint, {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${session.access_token}`
+                if (error) throw error;
+            } else {
+                // Connect
+                const { error } = await supabase
+                    .from("subscriptions")
+                    .insert({
+                        subscriber_id: session.user.id,
+                        subscribed_to_id: targetUserId
+                    });
+
+                if (error) {
+                    if (error.code === '23505') { // Unique violation
+                        toast({
+                            title: "Already connected",
+                            description: "You are already following this user.",
+                        });
+                        setIsConnected(true);
+                        return;
+                    }
+                    throw error;
                 }
-            });
 
-            if (error) {
-                throw new Error(error || "Failed to update connection");
+                // Create notification
+                try {
+                    // Get subscriber details
+                    const { data: subscriberProfile } = await supabase
+                        .from("profiles")
+                        .select("username, display_name")
+                        .eq("user_id", session.user.id)
+                        .single();
+
+                    const subscriberName = subscriberProfile?.display_name || subscriberProfile?.username || "Someone";
+
+                    await supabase.from("notifications").insert({
+                        recipient_id: targetUserId,
+                        actor_id: session.user.id,
+                        type: "connection",
+                        message: `${subscriberName} connected with you`,
+                        is_read: false
+                    } as any);
+                } catch (notifyError) {
+                    console.error("Failed to send notification:", notifyError);
+                }
             }
 
             const newStatus = !isConnected;
@@ -56,9 +93,10 @@ export const ConnectButton = ({ targetUserId, initialIsConnected, onConnectionCh
                 description: newStatus ? "You are now following this user." : "You have unfollowed this user.",
             });
         } catch (error: any) {
+            console.error("Connection error:", error);
             toast({
                 title: "Error",
-                description: error.message,
+                description: error.message || "Failed to update connection",
                 variant: "destructive",
             });
         } finally {
