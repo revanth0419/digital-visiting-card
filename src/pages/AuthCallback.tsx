@@ -4,27 +4,61 @@ import { supabase } from "@/integrations/supabase/client";
 
 const AuthCallback = () => {
     const navigate = useNavigate();
+    const [verifying, setVerifying] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const handleAuthCallback = async () => {
+            console.log("AuthCallback: Starting auth callback handling...");
             try {
-                const code = new URL(window.location.href).searchParams.get("code");
+                const params = new URLSearchParams(window.location.search);
+                const code = params.get("code");
+                const next = params.get("next");
+                const errorParam = params.get("error");
+                const errorDescription = params.get("error_description");
 
-                if (code) {
-                    const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
-                    if (error) throw error;
-                } else {
-                    // If no code is present, check if we already have a session
-                    const { error } = await supabase.auth.getSession();
-                    if (error) throw error;
+                console.log("AuthCallback Params:", { code: !!code, next, error: errorParam, errorDescription });
+
+                if (errorParam) {
+                    throw new Error(errorDescription || errorParam);
                 }
 
-                navigate("/dashboard");
+                if (code) {
+                    console.log("AuthCallback: Exchanging code for session...");
+                    const { data, error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+                    if (error) {
+                        console.error("AuthCallback: Exchange error:", error);
+                        throw error;
+                    }
+                    console.log("AuthCallback: Session exchanged successfully", { user: data.session?.user?.id });
+                } else {
+                    console.log("AuthCallback: No code, checking existing session...");
+                    // If no code is present, check if we already have a session
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    if (error) throw error;
+                    if (!session) {
+                        console.log("AuthCallback: No session found, redirecting to auth");
+                        throw new Error("No session found");
+                    }
+                    console.log("AuthCallback: Existing session found", { user: session.user.id });
+                }
+
+                console.log("AuthCallback: Redirecting to:", next || "/dashboard");
+                // Small delay to ensure state updates propagate
+                setTimeout(() => {
+                    if (next) {
+                        navigate(next);
+                    } else {
+                        navigate("/dashboard");
+                    }
+                }, 500);
+
             } catch (error: any) {
                 console.error("Error exchanging code for session:", error);
                 setError(error.message);
-                setTimeout(() => navigate("/auth"), 3000);
+                // Don't redirect immediately on error, let user see it
+            } finally {
+                setVerifying(false);
             }
         };
 
@@ -33,17 +67,23 @@ const AuthCallback = () => {
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen">
-                <p className="text-red-500 mb-4">Authentication Error: {error}</p>
-                <p>Redirecting to login...</p>
+            <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
+                <p className="text-red-500 mb-4 font-semibold">Authentication Error</p>
+                <p className="text-muted-foreground mb-4">{error}</p>
+                <button
+                    onClick={() => navigate("/auth")}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                >
+                    Back to Login
+                </button>
             </div>
         );
     }
 
     return (
-        <div className="flex items-center justify-center min-h-screen">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <span className="ml-2">Verifying authentication...</span>
+        <div className="flex flex-col items-center justify-center min-h-screen">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+            <span className="text-muted-foreground">Verifying secure connection...</span>
         </div>
     );
 };

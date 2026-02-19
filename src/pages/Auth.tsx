@@ -152,11 +152,15 @@ const Auth = () => {
       return;
     }
 
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/auth/reset-password")}`;
+    console.log("Reset Password Redirect URL:", redirectTo);
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "https://crystal-link.vercel.app/auth/callback",
+      redirectTo,
     });
 
     if (error) {
+      console.error("Reset Password Error:", error);
       toast({
         title: "Error",
         description: error.message,
@@ -177,16 +181,16 @@ const Auth = () => {
   const checkEmailExists = async (emailToCheck: string): Promise<boolean> => {
     try {
       // Call the RPC function we created in migration 002
-      const { data, error } = await supabase.rpc('check_email_exists', { 
-        email_arg: emailToCheck 
+      const { data, error } = await (supabase as any).rpc('check_email_exists', {
+        email_arg: emailToCheck
       });
-      
+
       if (error) {
         console.warn("Error checking email existence (RPC might be missing):", error);
         // Fallback: assume email doesn't exist if check fails, let signUp handle it
         return false;
       }
-      
+
       return data as boolean;
     } catch (err) {
       console.error("Failed to check email:", err);
@@ -373,7 +377,7 @@ const Auth = () => {
           setIsLogin(true);
           setPassword("");
           setConfirmPassword("");
-          
+
           // Do NOT navigate to dashboard
         }
       }
