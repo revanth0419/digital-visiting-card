@@ -25,7 +25,7 @@ const AuthCallback = () => {
 
                 if (code) {
                     console.log("AuthCallback: Exchanging code for session...");
-                    const { data, error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+                    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
                     if (error) {
                         console.error("AuthCallback: Exchange error:", error);
                         throw error;

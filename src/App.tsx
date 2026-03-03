@@ -52,7 +52,7 @@ const AnimatedRoutes = () => {
           } />
           <Route path="/auth" element={<Auth />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route path="/auth/reset-password" element={
+          <Route path="/update-password" element={
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}

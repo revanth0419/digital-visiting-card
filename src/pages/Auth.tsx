@@ -152,7 +152,7 @@ const Auth = () => {
       return;
     }
 
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/auth/reset-password")}`;
+    const redirectTo = "https://crystal-link.vercel.app/update-password";
     console.log("Reset Password Redirect URL:", redirectTo);
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {

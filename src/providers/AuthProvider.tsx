@@ -33,10 +33,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            (_event, session) => {
+            (event, session) => {
                 setSession(session);
                 setUser(session?.user ?? null);
                 setLoading(false);
+
+                // Handle password recovery routing globally
+                if (event === "PASSWORD_RECOVERY") {
+                    console.log("AuthProvider: Password recovery mode detected globally. Routing to reset-password.");
+                    // Check if we are already on the reset-password page to avoid infinite loops, but we use window URL
+                    if (!window.location.pathname.includes('/update-password')) {
+                        window.location.href = "/update-password";
+                    }
+                }
             }
         );
 
