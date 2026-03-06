@@ -10,15 +10,14 @@ const Index = () => {
   return (
     <div className="min-h-screen gradient-mesh">
       {/* Header with Theme Toggle */}
-      {/* Header with Theme Toggle */}
-      <div className="container mx-auto px-4 pt-4 flex justify-end">
+      <div className="absolute top-0 right-0 p-4 sm:p-6 z-50">
         <ThemeToggle />
       </div>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-12 md:py-20 text-center">
-        <div className="max-w-4xl mx-auto animate-fade-in">
-          <div className="flex items-center justify-center gap-3 mb-2 mt-12 animate-bounce-in">
+      <section className="container mx-auto px-4 min-h-[90vh] flex flex-col justify-center items-center text-center pt-16 pb-12">
+        <div className="max-w-4xl mx-auto animate-fade-in w-full">
+          <div className="flex items-center justify-center gap-3 mb-4 animate-bounce-in">
             <div className="p-0">
               <DVCLogo variant="hero" className="w-20 h-20 md:w-28 md:h-28" />
             </div>
